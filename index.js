@@ -248,11 +248,11 @@ function publicTable(table, viewer) {
   const isAdmin = viewer && viewer.role === 'admin';
   const phase = table.phase;
   const croupierPublic = table.croupier.map((c, i) => {
-    if (phase === 'jeu' && i === 1 && !isAdmin) return { v: '?', c: '?', cachee: true };
+    if (phase === 'jeu' && i === 1) return { v: '?', c: '?', cachee: true };
     return c;
   });
   let totC = null;
-  if (phase !== 'jeu' || isAdmin) totC = table.croupier.length ? tot(table.croupier) : null;
+  if (phase !== 'jeu') totC = table.croupier.length ? tot(table.croupier) : null;
   else if (table.croupier[0]) totC = val(table.croupier[0]);
 
   return {
@@ -567,7 +567,7 @@ async function handleApi(req, res, path) {
       } catch (e) {
         console.error(e);
       }
-    }, 2500);
+    }, 700);
     return send(res, 200, {
       table: publicTable(table, moi),
       moi: { id: moi.id, pseudo: moi.pseudo, role: moi.role, solde: moi.solde }
@@ -774,6 +774,13 @@ input{font-family:inherit}
 @keyframes deal{from{opacity:0;transform:translateY(-14px) scale(.88)}to{opacity:1;transform:none}}
 .tot{display:inline-block;background:rgba(0,0,0,.45);color:#fff;font-size:.85rem;margin-top:.35rem;min-height:1.2em;padding:.15rem .55rem;border-radius:12px;font-weight:600}
 .msg-center{color:#e8f5e9;text-align:center;padding:.45rem .6rem;font-size:.88rem;min-height:2.2em;letter-spacing:.03em;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.my-hand{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100px;width:100%;padding:.3rem 0}
+.my-hand .cartes{gap:.4rem;min-height:90px}
+.my-hand .carte{width:64px;height:92px;font-size:1.25rem;border-radius:8px}
+.my-hand .tot{margin-top:.4rem;font-size:1rem}
+.bet-spot{width:72px;height:72px;border-radius:50%;border:3px dashed rgba(255,215,120,.55);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;letter-spacing:.08em;color:#f5e6b8;margin:.4rem auto .2rem;background:rgba(0,0,0,.18);box-shadow:inset 0 0 16px rgba(0,0,0,.25)}
+.bet-spot.ready{border-style:solid;border-color:#f0c14a;background:rgba(240,193,74,.15);animation:pulse .9s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 .seats-row{display:flex;justify-content:center;gap:.35rem;width:100%;flex-wrap:nowrap;padding:0 .15rem;overflow-x:auto}
 .seat{flex:1;min-width:58px;max-width:88px;background:rgba(0,0,0,.32);border:2px solid rgba(255,255,255,.12);border-radius:14px;padding:.45rem .2rem .4rem;text-align:center;font-size:.62rem}
 .seat.mine{border-color:#f0c14a;box-shadow:0 0 14px rgba(240,193,74,.35);background:rgba(20,40,30,.55)}
@@ -788,6 +795,7 @@ input{font-family:inherit}
 .chip{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.72rem;color:#fff;position:relative;box-shadow:0 3px 8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.25);border:4px solid rgba(255,255,255,.35);cursor:pointer;user-select:none}
 .chip::after{content:'';position:absolute;inset:5px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.5);pointer-events:none}
 .chip.d{opacity:.3;pointer-events:none;filter:grayscale(.4)}
+.chip.sel{outline:3px solid #fff;transform:translateY(-4px)}
 .c5{background:radial-gradient(circle at 35% 30%,#e85a5a,#9b1212)}.c10{background:radial-gradient(circle at 35% 30%,#5a9be8,#1a4a9b)}.c25{background:radial-gradient(circle at 35% 30%,#5ad88a,#0d6b3a)}.c50{background:radial-gradient(circle at 35% 30%,#f0c04a,#a07810)}.c100{background:radial-gradient(circle at 35% 30%,#2a2a2a,#0d0d0d);color:#f5e6b8;border-color:rgba(201,162,39,.55)}
 .acts{display:flex;justify-content:center;gap:.45rem;flex-wrap:wrap}
 .acts button{min-width:72px;padding:.6rem .85rem;border-radius:8px;border:1px solid rgba(201,162,39,.35);background:rgba(201,162,39,.12);color:#f5f0e6;font-size:.8rem}
@@ -871,6 +879,8 @@ input{font-family:inherit}
       <div class="tot" id="dealerTot"></div>
     </div>
     <div class="msg-center" id="tableMsg">Prenez place</div>
+    <div class="my-hand" id="myHand"></div>
+    <div class="bet-spot" id="betSpot">MISE</div>
     <div class="seats-row" id="seatsRow"></div>
   </div>
   <div class="controls">
@@ -928,7 +938,7 @@ const API='';
 let token=localStorage.getItem('sp.t')||null;
 let moi=null;
 let tableId=null;
-let miseLocale=0;
+let chipSel=0;
 let poll=null;
 
 const $=id=>document.getElementById(id);
@@ -952,11 +962,36 @@ function logout(callApi){
   if(poll){clearInterval(poll);poll=null;}
   show('splash');
 }
+let audioCtx=null;
+function ensureAudio(){if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume();}
+function playCardSound(){
+  try{
+    ensureAudio();
+    const t=audioCtx.currentTime;
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    o.type='triangle';
+    o.frequency.setValueAtTime(420,t);
+    o.frequency.exponentialRampToValueAtTime(180,t+.06);
+    g.gain.setValueAtTime(.08,t);
+    g.gain.exponentialRampToValueAtTime(.001,t+.1);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t); o.stop(t+.12);
+    const o2=audioCtx.createOscillator();
+    const g2=audioCtx.createGain();
+    o2.type='square';
+    o2.frequency.value=90;
+    g2.gain.setValueAtTime(.04,t);
+    g2.gain.exponentialRampToValueAtTime(.001,t+.08);
+    o2.connect(g2); g2.connect(audioCtx.destination);
+    o2.start(t); o2.stop(t+.09);
+  }catch(e){}
+}
 function carteEl(c, small){
   const e=document.createElement('div');
   e.className='carte'+(c.cachee?' x':'')+((c.c==='♥'||c.c==='♦')&&!c.cachee?' r':'');
   if(c.cachee) e.textContent='?';
-  else e.innerHTML='<span>'+c.v+'</span><span style="font-size:'+(small?'.5rem':'.85rem')+'">'+c.c+'</span>';
+  else e.innerHTML='<span>'+c.v+'</span><span style="font-size:'+(small?'.5rem':'.95rem')+'">'+c.c+'</span>';
   return e;
 }
 
@@ -987,15 +1022,15 @@ async function goLobby(){
     list.appendChild(card);
   });
   show('lobby');
-  poll=setInterval(async()=>{try{const x=await api('GET','/api/lobby'); moi=x.moi; $('lobbySolde').textContent=moi.solde.toLocaleString('fr-FR');}catch{}},4000);
+  poll=setInterval(async()=>{try{const x=await api('GET','/api/lobby'); moi=x.moi; $('lobbySolde').textContent='€'+moi.solde.toLocaleString('fr-FR');}catch{}},2500);
 }
 
 async function joinTable(id){
-  tableId=id; miseLocale=0;
+  tableId=id; chipSel=0;
   if(poll) clearInterval(poll);
   await refreshTable();
   show('table-page');
-  poll=setInterval(refreshTable,1800);
+  poll=setInterval(refreshTable,800);
 }
 async function refreshTable(){
   if(!tableId) return;
@@ -1004,6 +1039,7 @@ async function refreshTable(){
     moi=d.moi; renderTable(d.table);
   }catch(e){console.warn(e);}
 }
+let lastCardSig='';
 function renderTable(t){
   $('tableTitle').textContent=t.nom.toUpperCase();
   $('tableSolde').textContent='€'+moi.solde.toLocaleString('fr-FR');
@@ -1011,20 +1047,28 @@ function renderTable(t){
   $('dealerCards').innerHTML='';
   (t.croupier||[]).forEach(c=>$('dealerCards').appendChild(carteEl(c)));
   $('dealerTot').textContent=t.totCroupier!=null?t.totCroupier:'';
+  const my=t.sieges.find(s=>s.estMoi);
+  const mh=$('myHand'); mh.innerHTML='';
+  if(my && my.main && my.main.length){
+    const wrap=document.createElement('div'); wrap.className='cartes';
+    my.main.forEach(c=>wrap.appendChild(carteEl(c)));
+    mh.appendChild(wrap);
+    if(my.tot!=null){const totEl=document.createElement('div'); totEl.className='tot'; totEl.textContent=my.tot; mh.appendChild(totEl);}
+  }
+  const sig=(t.croupier||[]).map(c=>c.v+c.c).join('')+'|'+(my&&my.main?my.main.map(c=>c.v+c.c).join(''):'');
+  if(sig!==lastCardSig && sig.length>lastCardSig.length) playCardSound();
+  lastCardSig=sig;
   const row=$('seatsRow'); row.innerHTML='';
   t.sieges.forEach(s=>{
     const el=document.createElement('div');
     el.className='seat'+(s.estMoi?' mine':'')+(s.pseudo?'':' empty')+(t.tourSiege===s.index?' turn':'');
-    let cards='';
-    (s.main||[]).forEach(c=>{const x=carteEl(c,true); cards+=x.outerHTML;});
-    el.innerHTML='<div class="sn">'+(s.pseudo||'Libre')+'</div><div class="sm">'+(s.mise?'€'+s.mise:'—')+(s.tot!=null?' · '+s.tot:'')+'</div><div class="sc">'+cards+'</div>';
+    el.innerHTML='<div class="sn">'+(s.pseudo||'S\'asseoir')+'</div><div class="sm">'+(s.mise?'€'+s.mise:(s.pseudo?'—':'·'))+(s.tot!=null && !s.estMoi?' · '+s.tot:'')+'</div>';
     if(!s.pseudo && (t.phase==='attente'||t.phase==='mises'||t.phase==='fin')){
       el.style.cursor='pointer';
-      el.onclick=async()=>{try{await api('POST','/api/table/'+tableId+'/asseoir',{siege:s.index}); refreshTable();}catch(e){alert(e.message);}};
+      el.onclick=async()=>{try{ensureAudio(); await api('POST','/api/table/'+tableId+'/asseoir',{siege:s.index}); refreshTable();}catch(e){alert(e.message);}};
     }
     row.appendChild(el);
   });
-  const my=t.sieges.find(s=>s.estMoi);
   const chips=$('chips'); chips.innerHTML='';
   const acts=$('acts'); acts.innerHTML='';
   $('miseDisp').textContent='';
@@ -1041,44 +1085,39 @@ function renderTable(t){
     document.body.appendChild(banner);
     setTimeout(()=>{const b=document.getElementById('winBanner'); if(b) b.remove();},3500);
   }
+  const spot=$('betSpot');
+  if(spot){
+    spot.className='bet-spot'+(chipSel && my && (t.phase==='mises'||t.phase==='attente'||t.phase==='fin')?' ready':'');
+    spot.textContent=my && my.mise?('€'+my.mise):(chipSel?('€'+chipSel):'MISE');
+    spot.onclick=async()=>{
+      if(!my || !chipSel) return;
+      if(!(t.phase==='mises'||t.phase==='attente'||t.phase==='fin')) return;
+      if(chipSel<t.minMise||chipSel>t.maxMise||chipSel>moi.solde) return alert('Mise impossible');
+      try{ensureAudio(); playCardSound(); await api('POST','/api/table/'+tableId+'/miser',{montant:chipSel}); chipSel=0; refreshTable();}catch(e){alert(e.message);}
+    };
+  }
   if(my && (t.phase==='mises'||t.phase==='attente'||t.phase==='fin')){
-    $('miseDisp').textContent=miseLocale?('Mise : €'+miseLocale):'Mise min €'+t.minMise+' · max €'+t.maxMise;
-    [5,10,25,50,100].forEach(v=>{
-      const can=moi.solde>=miseLocale+v && miseLocale+v<=t.maxMise;
+    $('miseDisp').textContent=chipSel?('Jeton €'+chipSel+' → tape le cercle'):'Choisis un jeton, puis tape le tapis';
+    [10,25,50,100].forEach(v=>{
+      const can=moi.solde>=v && v>=t.minMise && v<=t.maxMise;
       const b=document.createElement('div');
-      b.className='chip c'+v+(can?'':' d');
+      b.className='chip c'+v+(can?'':' d')+(chipSel===v?' sel':'');
       b.textContent=v;
-      if(can) b.onclick=()=>{miseLocale+=v; if(miseLocale>t.maxMise) miseLocale=t.maxMise; renderTable(t);};
+      if(can) b.onclick=()=>{chipSel=v; renderTable(t);};
       chips.appendChild(b);
     });
-    const clr=document.createElement('button'); clr.textContent='Effacer';
-    clr.onclick=()=>{miseLocale=0; renderTable(t);}; acts.appendChild(clr);
-    const go=document.createElement('button'); go.textContent='Miser €'+(miseLocale||0); go.className='p';
-    go.disabled=miseLocale<t.minMise||miseLocale>t.maxMise;
-    go.onclick=async()=>{try{await api('POST','/api/table/'+tableId+'/miser',{montant:miseLocale}); miseLocale=0; refreshTable();}catch(e){alert(e.message);}};
-    acts.appendChild(go);
   }
   if(my && t.phase==='jeu' && t.tourSiege===my.index && my.statut==='en_jeu'){
-    [['Tirer','tirer'],['Rester','rester',1],['Doubler','doubler']].forEach(([l,a,p])=>{
+    [['Tirer','tirer'],['Doubler','doubler'],['Rester','rester',1]].forEach(([l,a,p])=>{
       const b=document.createElement('button'); b.textContent=l; if(p) b.className='p';
-      b.onclick=async()=>{try{await api('POST','/api/table/'+tableId+'/action',{action:a}); refreshTable();}catch(e){alert(e.message);}};
+      b.onclick=async()=>{try{ensureAudio(); playCardSound(); await api('POST','/api/table/'+tableId+'/action',{action:a}); refreshTable();}catch(e){alert(e.message);}};
       acts.appendChild(b);
     });
   }
   if(t.phase==='fin'){
-    const b=document.createElement('button'); b.textContent='Nouvelle main'; b.className='p';
-    b.onclick=async()=>{try{await api('POST','/api/table/'+tableId+'/action',{action:'nouvelle'}); miseLocale=0; refreshTable();}catch(e){alert(e.message);}};
+    const b=document.createElement('button'); b.textContent='Rejouer'; b.className='p';
+    b.onclick=async()=>{try{await api('POST','/api/table/'+tableId+'/action',{action:'nouvelle'}); chipSel=0; refreshTable();}catch(e){alert(e.message);}};
     acts.appendChild(b);
-  }
-  if(moi.role==='admin' && (t.phase==='mises'||t.phase==='attente')){
-    const b=document.createElement('button'); b.textContent='Démarrer';
-    b.onclick=async()=>{try{await api('POST','/api/table/'+tableId+'/action',{action:'demarrer'}); refreshTable();}catch(e){alert(e.message);}};
-    acts.appendChild(b);
-  }
-  if(my){
-    const q=document.createElement('button'); q.textContent='Quitter';
-    q.onclick=async()=>{try{await api('POST','/api/table/'+tableId+'/quitter',{}); tableId=null; goLobby();}catch(e){alert(e.message);}};
-    acts.appendChild(q);
   }
 }
 
