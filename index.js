@@ -81,8 +81,8 @@ function newTable(id, nom) {
     croupier: [],
     sieges: [emptySeat(), emptySeat(), emptySeat(), emptySeat(), emptySeat()],
     tourSiege: -1,
-    minMise: 50,
-    maxMise: 5000
+    minMise: 10,
+    maxMise: 100
   };
 }
 
@@ -231,6 +231,7 @@ function settleSiege(table, siege, compte) {
   }
   if (compte) compte.solde += gain;
   siege.resultat = r;
+  siege.gainAffiche = gain;
   siege.statut = 'fini';
   histGlobal.unshift({
     pseudo: siege.pseudo,
@@ -274,6 +275,7 @@ function publicTable(table, viewer) {
       statut: s.statut,
       resultat: s.resultat,
       message: s.message,
+      gainAffiche: s.gainAffiche || 0,
       estMoi: viewer ? s.joueurId === viewer.id : false
     }))
   };
@@ -761,35 +763,41 @@ input{font-family:inherit}
 .btn-sm{background:rgba(201,162,39,.15);border:1px solid rgba(201,162,39,.4);color:var(--or2);border-radius:8px;padding:.55rem .9rem;font-size:.8rem;font-weight:600;white-space:nowrap}
 
 /* TABLE */
-#table-page{background:#061a14}
-.felt{flex:1;background:radial-gradient(ellipse at 50% 30%,#124536 0%,#0a2f24 50%,#061c16 100%);padding:1rem .6rem 1.2rem;display:flex;flex-direction:column;align-items:center;justify-content:space-between;min-height:0}
+#table-page{background:#0a1f18}
+.felt{flex:1;background:radial-gradient(ellipse 90% 70% at 50% 45%,#1a6b4a 0%,#0f4a34 40%,#0a3224 70%,#061c14 100%);padding:1rem .5rem 1rem;display:flex;flex-direction:column;align-items:center;justify-content:space-between;min-height:0;box-shadow:inset 0 0 80px rgba(0,0,0,.35)}
 .dealer-zone{text-align:center;width:100%}
-.lib{font-size:.6rem;letter-spacing:.18em;opacity:.45;text-transform:uppercase;margin-bottom:.35rem}
-.cartes{display:flex;gap:.28rem;justify-content:center;flex-wrap:wrap;min-height:64px}
-.carte{width:46px;height:66px;border-radius:5px;background:var(--card);color:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;box-shadow:0 3px 8px rgba(0,0,0,.35);animation:deal .25s ease}
-.carte.r{color:#b91c1c}
-.carte.x{background:linear-gradient(145deg,#1e3a5f,#152a45);color:transparent;border:1px solid rgba(201,162,39,.35)}
-@keyframes deal{from{opacity:0;transform:translateY(-12px) scale(.9)}to{opacity:1;transform:none}}
-.tot{color:var(--or2);font-size:.95rem;margin-top:.25rem;min-height:1.2em}
-.msg-center{color:var(--or2);text-align:center;padding:.5rem;font-size:.9rem;min-height:2.2em;letter-spacing:.04em}
-.seats-row{display:flex;justify-content:center;gap:.4rem;width:100%;flex-wrap:wrap;padding:0 .2rem}
-.seat{width:calc(20% - .4rem);min-width:62px;max-width:90px;background:rgba(0,0,0,.28);border:1px solid rgba(201,162,39,.15);border-radius:10px;padding:.4rem .25rem;text-align:center;font-size:.65rem}
-.seat.mine{border-color:var(--or);box-shadow:0 0 12px rgba(201,162,39,.2)}
-.seat.empty{opacity:.45}
-.seat .sn{font-weight:600;color:var(--or2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.seat .sm{color:#fff;opacity:.7;margin:.15rem 0}
-.seat .sc{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;min-height:28px}
-.seat .sc .carte{width:22px;height:32px;font-size:.55rem;border-radius:3px}
-.seat.turn{outline:2px solid var(--or)}
-.controls{padding:.7rem;background:rgba(0,0,0,.5);border-top:1px solid rgba(201,162,39,.15)}
-.chips{display:flex;justify-content:center;gap:.45rem;margin-bottom:.6rem;flex-wrap:wrap}
-.chip{width:42px;height:42px;border-radius:50%;border:2px dashed rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.7rem;color:#fff}
-.chip.d{opacity:.3;pointer-events:none}
-.c5{background:#b4172c}.c25{background:#12784a}.c100{background:#1b4a8a}.c500{background:#1a1a1a;color:var(--or)}
+.lib{font-size:.58rem;letter-spacing:.2em;opacity:.5;text-transform:uppercase;margin-bottom:.35rem;color:#c8e6d5}
+.cartes{display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap;min-height:68px}
+.carte{width:48px;height:68px;border-radius:6px;background:linear-gradient(180deg,#fffef8,#f0ebe0);color:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;box-shadow:0 4px 10px rgba(0,0,0,.4);animation:deal .28s ease;border:1px solid rgba(0,0,0,.08)}
+.carte.r{color:#c41e3a}
+.carte.x{background:linear-gradient(145deg,#1a4a7a,#0e2a48);color:transparent;border:1px solid rgba(201,162,39,.4)}
+@keyframes deal{from{opacity:0;transform:translateY(-14px) scale(.88)}to{opacity:1;transform:none}}
+.tot{display:inline-block;background:rgba(0,0,0,.45);color:#fff;font-size:.85rem;margin-top:.35rem;min-height:1.2em;padding:.15rem .55rem;border-radius:12px;font-weight:600}
+.msg-center{color:#e8f5e9;text-align:center;padding:.45rem .6rem;font-size:.88rem;min-height:2.2em;letter-spacing:.03em;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.seats-row{display:flex;justify-content:center;gap:.35rem;width:100%;flex-wrap:nowrap;padding:0 .15rem;overflow-x:auto}
+.seat{flex:1;min-width:58px;max-width:88px;background:rgba(0,0,0,.32);border:2px solid rgba(255,255,255,.12);border-radius:14px;padding:.45rem .2rem .4rem;text-align:center;font-size:.62rem}
+.seat.mine{border-color:#f0c14a;box-shadow:0 0 14px rgba(240,193,74,.35);background:rgba(20,40,30,.55)}
+.seat.empty{opacity:.55;border-style:dashed}
+.seat .sn{font-weight:700;color:#f5e6b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.6rem}
+.seat .sm{color:#fff;opacity:.85;margin:.12rem 0;font-size:.6rem}
+.seat .sc{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;min-height:30px}
+.seat .sc .carte{width:24px;height:34px;font-size:.55rem;border-radius:3px}
+.seat.turn{border-color:#7dffb3;box-shadow:0 0 16px rgba(125,255,179,.35)}
+.controls{padding:.75rem .6rem calc(.75rem + env(safe-area-inset-bottom));background:linear-gradient(180deg,#1a1510,#0d0b09);border-top:1px solid rgba(201,162,39,.25)}
+.chips{display:flex;justify-content:center;gap:.55rem;margin-bottom:.65rem;flex-wrap:wrap}
+.chip{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.72rem;color:#fff;position:relative;box-shadow:0 3px 8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.25);border:4px solid rgba(255,255,255,.35);cursor:pointer;user-select:none}
+.chip::after{content:'';position:absolute;inset:5px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.5);pointer-events:none}
+.chip.d{opacity:.3;pointer-events:none;filter:grayscale(.4)}
+.c5{background:radial-gradient(circle at 35% 30%,#e85a5a,#9b1212)}.c10{background:radial-gradient(circle at 35% 30%,#5a9be8,#1a4a9b)}.c25{background:radial-gradient(circle at 35% 30%,#5ad88a,#0d6b3a)}.c50{background:radial-gradient(circle at 35% 30%,#f0c04a,#a07810)}.c100{background:radial-gradient(circle at 35% 30%,#2a2a2a,#0d0d0d);color:#f5e6b8;border-color:rgba(201,162,39,.55)}
 .acts{display:flex;justify-content:center;gap:.45rem;flex-wrap:wrap}
 .acts button{min-width:72px;padding:.6rem .85rem;border-radius:8px;border:1px solid rgba(201,162,39,.35);background:rgba(201,162,39,.12);color:#f5f0e6;font-size:.8rem}
 .acts button.p{background:linear-gradient(180deg,#e0c15a,#a07818);color:#1a1205;border:none;font-weight:700}
-.mise-display{text-align:center;color:var(--or);font-size:1.1rem;font-weight:600;margin-bottom:.4rem}
+.mise-display{text-align:center;color:var(--or);font-size:1.15rem;font-weight:700;margin-bottom:.4rem;letter-spacing:.02em}
+.win-banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:50;background:rgba(0,0,0,.82);border:2px solid var(--or);border-radius:14px;padding:1rem 1.6rem;text-align:center;pointer-events:none;animation:fadeIn .3s ease;box-shadow:0 8px 40px rgba(201,162,39,.35)}
+.win-banner .wb-t{font-size:.75rem;letter-spacing:.25em;color:var(--or2);margin-bottom:.25rem}
+.win-banner .wb-a{font-size:1.8rem;font-weight:800;color:#fff;text-shadow:0 0 20px rgba(201,162,39,.5)}
+.win-banner.lose{border-color:#888}
+.win-banner.lose .wb-t{color:#bbb}
 
 /* PROFIL / REGIE */
 .panel{flex:1;padding:1.2rem;max-width:480px;margin:0 auto;width:100%}
@@ -968,13 +976,13 @@ async function goLobby(){
   const d=await api('GET','/api/lobby');
   moi=d.moi;
   $('lobbyPseudo').textContent=moi.pseudo;
-  $('lobbySolde').textContent=moi.solde.toLocaleString('fr-FR');
+  $('lobbySolde').textContent='€'+moi.solde.toLocaleString('fr-FR');
   $('btnRegie').style.display=moi.role==='admin'?'':'none';
   const list=$('tableList'); list.innerHTML='';
   d.tables.forEach(t=>{
     const card=document.createElement('div'); card.className='table-card';
     const dots=Array.from({length:5},(_,i)=>'<span class="'+(i<t.occupees?'on':'')+'"></span>').join('');
-    card.innerHTML='<div><h3>'+t.nom+'</h3><div class="meta">Entrée '+t.minMise+' · '+t.occupees+'/5 · '+t.phase+'</div><div class="seats-dots">'+dots+'</div></div><button class="btn-sm">Rejoindre</button>';
+    card.innerHTML='<div><h3>'+t.nom+'</h3><div class="meta">Min €'+t.minMise+' · Max €100 · '+t.occupees+'/5</div><div class="seats-dots">'+dots+'</div></div><button class="btn-sm">Rejoindre</button>';
     card.querySelector('button').onclick=()=>joinTable(t.id);
     list.appendChild(card);
   });
@@ -998,7 +1006,7 @@ async function refreshTable(){
 }
 function renderTable(t){
   $('tableTitle').textContent=t.nom.toUpperCase();
-  $('tableSolde').textContent=moi.solde.toLocaleString('fr-FR');
+  $('tableSolde').textContent='€'+moi.solde.toLocaleString('fr-FR');
   $('tableMsg').textContent=t.message||'';
   $('dealerCards').innerHTML='';
   (t.croupier||[]).forEach(c=>$('dealerCards').appendChild(carteEl(c)));
@@ -1009,7 +1017,7 @@ function renderTable(t){
     el.className='seat'+(s.estMoi?' mine':'')+(s.pseudo?'':' empty')+(t.tourSiege===s.index?' turn':'');
     let cards='';
     (s.main||[]).forEach(c=>{const x=carteEl(c,true); cards+=x.outerHTML;});
-    el.innerHTML='<div class="sn">'+(s.pseudo||'Libre')+'</div><div class="sm">'+(s.mise?s.mise:'—')+(s.tot!=null?' · '+s.tot:'')+'</div><div class="sc">'+cards+'</div>';
+    el.innerHTML='<div class="sn">'+(s.pseudo||'Libre')+'</div><div class="sm">'+(s.mise?'€'+s.mise:'—')+(s.tot!=null?' · '+s.tot:'')+'</div><div class="sc">'+cards+'</div>';
     if(!s.pseudo && (t.phase==='attente'||t.phase==='mises'||t.phase==='fin')){
       el.style.cursor='pointer';
       el.onclick=async()=>{try{await api('POST','/api/table/'+tableId+'/asseoir',{siege:s.index}); refreshTable();}catch(e){alert(e.message);}};
@@ -1020,19 +1028,33 @@ function renderTable(t){
   const chips=$('chips'); chips.innerHTML='';
   const acts=$('acts'); acts.innerHTML='';
   $('miseDisp').textContent='';
+  let banner=document.getElementById('winBanner');
+  if(banner) banner.remove();
+  if(my && t.phase==='fin' && my.resultat){
+    banner=document.createElement('div');
+    banner.id='winBanner';
+    const win=my.resultat==='gagne'||my.resultat==='blackjack';
+    const eq=my.resultat==='egalite';
+    banner.className='win-banner'+(win||eq?'':' lose');
+    const amt=my.gainAffiche||0;
+    banner.innerHTML='<div class="wb-t">'+(win?'YOU WIN':eq?'PUSH':'YOU LOSE')+'</div><div class="wb-a">'+(win||eq?'€'+amt:'—')+'</div>';
+    document.body.appendChild(banner);
+    setTimeout(()=>{const b=document.getElementById('winBanner'); if(b) b.remove();},3500);
+  }
   if(my && (t.phase==='mises'||t.phase==='attente'||t.phase==='fin')){
-    $('miseDisp').textContent=miseLocale?('Mise : '+miseLocale):'Choisissez votre mise (min '+t.minMise+')';
-    [5,25,100,500].forEach(v=>{
+    $('miseDisp').textContent=miseLocale?('Mise : €'+miseLocale):'Mise min €'+t.minMise+' · max €'+t.maxMise;
+    [5,10,25,50,100].forEach(v=>{
+      const can=moi.solde>=miseLocale+v && miseLocale+v<=t.maxMise;
       const b=document.createElement('div');
-      b.className='chip c'+v+(moi.solde>=miseLocale+v?'':' d');
+      b.className='chip c'+v+(can?'':' d');
       b.textContent=v;
-      if(moi.solde>=miseLocale+v) b.onclick=()=>{miseLocale+=v; renderTable(t);};
+      if(can) b.onclick=()=>{miseLocale+=v; if(miseLocale>t.maxMise) miseLocale=t.maxMise; renderTable(t);};
       chips.appendChild(b);
     });
     const clr=document.createElement('button'); clr.textContent='Effacer';
     clr.onclick=()=>{miseLocale=0; renderTable(t);}; acts.appendChild(clr);
-    const go=document.createElement('button'); go.textContent='Miser'; go.className='p';
-    go.disabled=miseLocale<t.minMise;
+    const go=document.createElement('button'); go.textContent='Miser €'+(miseLocale||0); go.className='p';
+    go.disabled=miseLocale<t.minMise||miseLocale>t.maxMise;
     go.onclick=async()=>{try{await api('POST','/api/table/'+tableId+'/miser',{montant:miseLocale}); miseLocale=0; refreshTable();}catch(e){alert(e.message);}};
     acts.appendChild(go);
   }
