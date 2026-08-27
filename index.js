@@ -151,9 +151,12 @@ function ui(s,skipDeal){
     acts.appendChild(go);
   }
   if(s.phase==='play'){const actsList=[['Tirer','hit']];if(s.canDouble)actsList.push(['Doubler','double']);actsList.push(['Rester','stand']);actsList.forEach(([l,a],i)=>{const b=document.createElement('button');if(a==='stand')b.className='p';if(a==='double'){b.className='p';b.style.background='#1e5a9c';b.style.color='#fff';}b.textContent=l;b.onclick=async()=>{if(window._act)return;window._act=1;try{const ns=await api('/api/action',{action:a});
-      if(a==='hit'&&ns.phase==='play'){const hand=ns.which===1&&ns.split?ns.split:ns.player;const last=hand[hand.length-1];sndCard();$('ph').appendChild(C(last));$('pt').textContent=ns.ptot!=null?ns.ptot:'';moi.solde=ns.solde;$('solde').textContent='€'+ns.solde;window._act=0;return;}
-      if(ns.phase==='end'){if(a==='hit'){const last=(ns.player||[]).slice(-1)[0];if(last)$('ph').appendChild(C(last));}await revealDealer(ns);ui(ns,true);}
-      else ui(ns);
+      const hand=ns.which===1&&ns.split?ns.split:ns.player;const last=hand&&hand[hand.length-1];
+      if((a==='hit'||a==='double')&&last){sndCard();$('ph').appendChild(C(last));$('pt').textContent=ns.ptot!=null?ns.ptot:'';}
+      if(a==='double'){const mid=$('chipon');mid.textContent=ns.bet||lastBet;mid.className='chipon on'+(ns.bet||lastBet);}
+      moi.solde=ns.solde;$('solde').textContent='€'+ns.solde;
+      if(ns.phase==='end'){await new Promise(r=>setTimeout(r,450));await revealDealer(ns);ui(ns,true);}
+      else if(a!=='hit') ui(ns);
     }catch(e){alert(e.message);}window._act=0;};acts.appendChild(b);});
   if(s.canSplit){const b=document.createElement('button');b.textContent='Séparer';b.onclick=async()=>{try{ui(await api('/api/action',{action:'split'}));}catch(e){alert(e.message);}};acts.appendChild(b);}}}
 function render(s){ui(s);}
