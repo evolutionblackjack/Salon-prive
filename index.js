@@ -11,9 +11,9 @@ function bj(m){return m&&m.length===2&&tot(m)===21;}
 function pair(m){const r=c=>['10','J','Q','K'].includes(c.v)?'10':c.v;return m&&m.length===2&&r(m[0])===r(m[1]);}
 const g={sabot:shoe(),dealer:[],player:[],split:null,which:0,bet:0,bet2:0,phase:'bet',msg:'Choisis une mise',result:'',uid:null,gain:0};
 function draw(forD,pTot){if(g.sabot.length<30)g.sabot=shoe();const bh={bingo:.9,gros_gain:.75,gain:.65}[mode];const ph={pipo:.9,grosse_perte:.75,perte:.65}[mode];const p=bh||ph;if(!p||Math.random()>p)return g.sabot.pop();const want=!!bh;const sl=g.sabot.slice(-10);let pick;if(forD){const tc=tot(g.dealer);pick=sl.sort((a,b)=>want?(tc<17?val(b)-val(a):Math.abs(21-tc-val(a))-Math.abs(21-tc-val(b))):(tc>=12&&tc<=16?val(b)-val(a):val(a)-val(b)))[0];}else{const tj=pTot==null?tot(g.player):pTot;pick=sl.sort((a,b)=>want?(tj>=12&&tj<=16?val(b)-val(a):val(a)-val(b)):Math.abs(21-tj-val(a))-Math.abs(21-tj-val(b)))[0];}const i=g.sabot.lastIndexOf(pick);if(i>=0)g.sabot.splice(i,1);else return g.sabot.pop();return pick;}
-function pub(moi){const hide=g.phase==='play'&&g.dealer[1];return{phase:g.phase,msg:g.msg,result:g.result,bet:g.bet,dealer:g.dealer.map((c,i)=>hide&&i===1?{v:'?',c:'?'}:c),dtot:hide?val(g.dealer[0]||{v:'0'}):(g.dealer.length?tot(g.dealer):null),player:g.player,ptot:g.player.length?tot(g.player):null,split:g.split,stot:g.split?tot(g.split):null,bet2:g.bet2,which:g.which,canSplit:pair(g.player)&&!g.split&&g.phase==='play'&&g.player.length===2,canDouble:g.phase==='play'&&((g.which===1&&g.split)?g.split.length===2:g.player.length===2)&&moi.solde>=((g.which===1&&g.split)?(g.bet2||g.bet):g.bet),gain:g.gain||0,solde:moi.solde,pseudo:moi.pseudo,role:moi.role};}
+function pub(moi){const hide=g.phase==='play'&&g.dealer[1];return{phase:g.phase,msg:g.msg,result:g.result,bet:g.bet,dealer:g.dealer.map((c,i)=>hide&&i===1?{v:'?',c:'?'}:c),dtot:hide?val(g.dealer[0]||{v:'0'}):(g.dealer.length?tot(g.dealer):null),player:g.player,ptot:g.player.length?tot(g.player):null,split:g.split,stot:g.split?tot(g.split):null,bet2:g.bet2,which:g.which,canSplit:(()=>{const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const h=hs[g.which]||hs[0];return g.phase==='play'&&pair(h&&h.cards)&&hs.length<4;})(),canDouble:g.phase==='play'&&((g.which===1&&g.split)?g.split.length===2:g.player.length===2)&&moi.solde>=((g.which===1&&g.split)?(g.bet2||g.bet):g.bet),hands:(g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[])).map(h=>({cards:h.cards,bet:h.bet,tot:tot(h.cards)})),gain:g.gain||0,solde:moi.solde,pseudo:moi.pseudo,role:moi.role};}
 function settle(hand,bet,c,splitHand){const pj=tot(hand),dj=tot(g.dealer);if(pj>21){g.gain-=bet;return'perdu';}if(!splitHand&&bj(hand)&&!bj(g.dealer)){const w=Math.floor(bet*1.5);c.solde+=bet+w;g.gain+=w;return'blackjack';}if(dj>21||pj>dj){c.solde+=bet*2;g.gain+=bet;return'gagne';}if(pj===dj){c.solde+=bet;return'egalite';}g.gain-=bet;return'perdu';}
-function finish(c){g.gain=0;const pOut=tot(g.player)>21&&(!g.split||tot(g.split)>21);if(!pOut){while(tot(g.dealer)<17)g.dealer.push(draw(true));}let t=settle(g.player,g.bet,c,!!g.split);if(g.split)t+=' / '+settle(g.split,g.bet2,c,true);g.phase='end';g.result=t;g.msg=t.includes('gagne')||t.includes('blackjack')?'Gagné':t.includes('egalite')?'Égalité':'Perdu';}
+function finish(c){g.gain=0;const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const pOut=hs.every(h=>tot(h.cards)>21);if(!pOut){while(tot(g.dealer)<17)g.dealer.push(draw(true));}const ts=hs.map((h,i)=>settle(h.cards,h.bet,c,i>0||hs.length>1));g.phase='end';g.result=ts.join(' / ');g.msg=g.result.includes('gagne')||g.result.includes('blackjack')?'Gagné':g.result.includes('egalite')?'Égalité':'Perdu';}
 function me(req){const h=req.headers.authorization||'';const t=h.startsWith('Bearer ')?h.slice(7):null;return t&&sessions.has(t)?comptes.get(sessions.get(t)):null;}
 function read(req){return new Promise(r=>{let d='';req.on('data',x=>d+=x);req.on('end',()=>{try{r(JSON.parse(d||'{}'));}catch{r({});}});});}
 function json(res,s,o){res.writeHead(s,{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,POST,OPTIONS'});res.end(JSON.stringify(o));}
@@ -23,12 +23,12 @@ async function api(req,res,path){
   if(path==='/api/login'&&req.method==='POST'){let c=null;for(const x of comptes.values())if(x.pseudo.toLowerCase()===String(b.pseudo||'').toLowerCase()&&x.code===String(b.code||''))c=x;if(!c)return json(res,401,{err:'Code refusé'});if(c.solde<10)c.solde=3000;const t=id()+id();sessions.set(t,c.id);return json(res,200,{token:t,moi:{pseudo:c.pseudo,role:c.role,solde:c.solde}});}
   const u=me(req);if(!u)return json(res,401,{err:'Session'});
   if(path==='/api/etat')return json(res,200,pub(u));
-  if(path==='/api/miser'&&req.method==='POST'){if(g.phase!=='bet'&&g.phase!=='end')return json(res,400,{err:'Attends la fin'});const m=+b.montant;if(!(m>=10&&m<=100))return json(res,400,{err:'Mise 10 a 100'});if(u.solde<m)return json(res,400,{err:'Solde'});g.uid=u.id;g.player=[];g.split=null;g.dealer=[];g.which=0;g.result='';u.solde-=m;g.bet=m;g.bet2=0;g.player.push(draw(false,0));g.dealer.push(draw(true));g.player.push(draw(false,tot(g.player)));g.dealer.push(draw(true));if(bj(g.player)){g.phase='end';if(!bj(g.dealer)){u.solde+=Math.floor(m*2.5);g.gain=Math.floor(m*1.5);g.msg='Blackjack';g.result='blackjack';}else{u.solde+=m;g.gain=0;g.msg='Égalité';g.result='egalite';}}else{g.phase='play';g.msg='Ton tour : Tirer, Doubler ou Rester';}return json(res,200,pub(u));}
-  if(path==='/api/action'&&req.method==='POST'){if(g.phase!=='play')return json(res,400,{err:'Pas le moment de tirer'});g.uid=u.id;const hand=g.which===1&&g.split?g.split:g.player;const a=b.action;
-    if(a==='hit'){hand.push(draw(false,tot(hand)));if(tot(hand)>21){if(g.which===0&&g.split){g.which=1;g.msg='Main 2';}else finish(u);}}
-    else if(a==='stand'){if(g.which===0&&g.split){g.which=1;g.msg='Main 2';}else finish(u);}
-    else if(a==='double'){if(hand.length!==2)return json(res,400,{err:'2 cartes'});const need=g.which===1?(g.bet2||g.bet):g.bet;if(u.solde<need)return json(res,400,{err:'Solde'});u.solde-=need;if(g.which===1)g.bet2=need*2;else g.bet*=2;hand.push(draw(false,tot(hand)));if(g.which===0&&g.split){g.which=1;g.msg='Main 2';}else finish(u);}
-    else if(a==='split'){if(!pair(g.player)||g.split)return json(res,400,{err:'Pas de paire'});if(u.solde<g.bet)return json(res,400,{err:'Solde'});u.solde-=g.bet;g.bet2=g.bet;const ace=g.player[0].v==='A';g.split=[g.player.pop()];g.player.push(draw(false,tot(g.player)));g.split.push(draw(false,tot(g.split)));if(ace){g.msg='As separes : 1 carte chacune';finish(u);}else{g.which=0;g.msg='Main 1 — Tirer ou Rester';}}
+  if(path==='/api/miser'&&req.method==='POST'){if(g.phase!=='bet'&&g.phase!=='end')return json(res,400,{err:'Attends la fin'});const m=+b.montant;if(!(m>=10&&m<=100))return json(res,400,{err:'Mise 10 a 100'});if(u.solde<m)return json(res,400,{err:'Solde'});g.uid=u.id;g.player=[];g.split=null;g.hands=[];g.dealer=[];g.which=0;g.result='';u.solde-=m;g.bet=m;g.bet2=0;g.player.push(draw(false,0));g.dealer.push(draw(true));g.player.push(draw(false,tot(g.player)));g.dealer.push(draw(true));if(bj(g.player)){g.phase='end';if(!bj(g.dealer)){u.solde+=Math.floor(m*2.5);g.gain=Math.floor(m*1.5);g.msg='Blackjack';g.result='blackjack';}else{u.solde+=m;g.gain=0;g.msg='Égalité';g.result='egalite';}g.hands=[{cards:g.player,bet:g.bet}];}else{g.phase='play';g.msg='Ton tour : Tirer, Doubler ou Rester';g.hands=[{cards:g.player,bet:g.bet}];}return json(res,200,pub(u));}
+  if(path==='/api/action'&&req.method==='POST'){if(g.phase!=='play')return json(res,400,{err:'Pas le moment de tirer'});g.uid=u.id;if(!g.hands||!g.hands.length)g.hands=[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2||g.bet}]:[]);const H=g.hands[g.which]||g.hands[0];const hand=H.cards;const a=b.action;const next=()=>{g.player=g.hands[0].cards;g.bet=g.hands[0].bet;g.split=g.hands[1]?g.hands[1].cards:null;g.bet2=g.hands[1]?g.hands[1].bet:0;if(g.which<g.hands.length-1){g.which++;g.msg='Main '+(g.which+1);}else finish(u);};
+    if(a==='hit'){hand.push(draw(false,tot(hand)));if(tot(hand)>21)next();}
+    else if(a==='stand')next();
+    else if(a==='double'){if(hand.length!==2)return json(res,400,{err:'2 cartes'});if(u.solde<H.bet)return json(res,400,{err:'Solde'});u.solde-=H.bet;H.bet*=2;hand.push(draw(false,tot(hand)));next();}
+    else if(a==='split'){if(!g.hands||!g.hands.length)g.hands=[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2||g.bet}]:[]);const h=g.hands[g.which];if(!pair(h.cards)||g.hands.length>=4)return json(res,400,{err:'Pas de paire'});if(u.solde<h.bet)return json(res,400,{err:'Solde'});u.solde-=h.bet;const ace=h.cards[0].v==='A';const c2=h.cards.pop();const nh={cards:[c2],bet:h.bet};h.cards.push(draw(false,tot(h.cards)));nh.cards.push(draw(false,tot(nh.cards)));g.hands.splice(g.which+1,0,nh);g.player=g.hands[0].cards;g.bet=g.hands[0].bet;g.split=g.hands[1]?g.hands[1].cards:null;g.bet2=g.hands[1]?g.hands[1].bet:0;if(ace){g.msg='As separes';g.which=Math.min(g.which+1,g.hands.length-1);if(g.which>=g.hands.length-1)finish(u);}else{g.msg='Main '+(g.which+1);}}
     else return json(res,400,{err:'Action'});return json(res,200,pub(u));}
   if(path==='/api/quitter'&&req.method==='POST'){
     if(g.phase==='play'&&g.bet){u.solde+=g.bet;if(g.bet2)u.solde+=g.bet2;}
@@ -66,14 +66,14 @@ transition:background .4s}
 .hlab{font-size:.58rem;letter-spacing:.12em;text-align:center;opacity:.7;margin-bottom:.2rem}
 .lab{font-size:.65rem;letter-spacing:.18em;opacity:.7;color:#f0d9a0}
 .hand{display:flex;gap:0;min-height:88px}
-.card{width:64px;height:92px;margin-right:-14px;border-radius:8px;background:linear-gradient(#fffef9,#efe4cf);color:#1a1208;position:relative;box-shadow:0 8px 14px #0006,inset 0 0 0 1px #e8dcc6;animation:deal .32s cubic-bezier(.2,.8,.2,1);flex-shrink:0}
+.card{width:66px;height:96px;margin-right:-16px;border-radius:9px;background:linear-gradient(#fffef8,#f3ead6);color:#1a1208;position:relative;box-shadow:0 10px 18px #0006,0 0 0 1px #d9c9a4;animation:deal .38s cubic-bezier(.16,.84,.28,1);flex-shrink:0}
 .card .c1,.card .c2{position:absolute;width:18px;text-align:center;font-family:Georgia,'Times New Roman',serif;font-weight:800;line-height:1.05;font-size:.78rem}
 .card .c1{top:5px;left:4px}.card .c2{bottom:5px;right:4px;transform:rotate(180deg)}
 .card .pip{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);font-size:1.35rem;font-family:Georgia,serif}
 .pips{position:absolute;left:16px;right:16px;top:16px;bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:repeat(3,1fr);place-items:center;font-size:.95rem}
 .card.r{color:#c41e3a}
 .card.x{background:repeating-linear-gradient(45deg,#6e1522 0 7px,#8b1e2d 7px 14px);color:transparent;border:2px solid #fff}
-@keyframes deal{from{transform:translate(-70px,-48px) rotate(-16deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes deal{from{transform:translate(-90px,-40px) rotate(-22deg);opacity:0}to{transform:none;opacity:1}}
 .acts button,.chip{transition:transform .18s ease,box-shadow .18s ease,opacity .18s}
 .acts button:active,.chip:active{transform:scale(.94)}
 .tot{background:#0006;padding:.15rem .5rem;border-radius:99px;font-size:.8rem}
@@ -90,9 +90,9 @@ transition:background .4s}
 .chipon.on10{background:repeating-conic-gradient(#fff 0 14deg,#1a46b8 14deg 28deg)}
 .chipon.on25{background:repeating-conic-gradient(#fff 0 14deg,#0f7a32 14deg 28deg)}
 .chipon.on50{background:repeating-conic-gradient(#fff 0 14deg,#c41e3a 14deg 28deg)}
-.banner{position:fixed;left:8%;right:8%;top:18%;z-index:40;background:linear-gradient(#1a1408,#000c);border:2px solid #e8d48b;border-radius:12px;padding:.85rem 1rem;text-align:center;animation:deal .28s ease}
-.banner b{display:block;letter-spacing:.28em;color:#e8d48b;font-size:.72rem}
-.banner span{font-size:1.7rem;font-weight:800;color:#fff}
+.banner{position:fixed;left:14%;right:14%;bottom:24%;z-index:30;background:#000b;border:1px solid #e8d48b;border-radius:10px;padding:.35rem .65rem;text-align:center;pointer-events:none}
+.banner b{display:block;letter-spacing:.2em;color:#e8d48b;font-size:.55rem}
+.banner span{font-size:1rem;font-weight:800;color:#fff}
 .acts{display:flex;justify-content:center;gap:.4rem;flex-wrap:wrap}
 .acts button{background:#c9a22722;color:#f4efe4;border:1px solid #c9a22755}
 .acts .p{background:linear-gradient(#e8d48b,#b8860b);color:#1a1205;border:0}
@@ -111,6 +111,12 @@ transition:background .4s}
 .rail-cell{text-align:center;min-width:72px}
 .rail .rk{font-size:.52rem;letter-spacing:.16em;opacity:.65}
 .rail .rv{font-size:1.1rem;font-weight:700;color:#f0e0a8}
+
+.hud{display:none;position:absolute;top:8px;left:8px;right:8px;z-index:20;background:#0b0b0bd9;border:1px solid #c9a22766;border-radius:10px;padding:.45rem .6rem;font-size:.72rem;backdrop-filter:blur(6px)}
+.hud.on{display:block}
+.hud b{color:#e8d48b}
+.hud .line{display:flex;justify-content:space-between;gap:.5rem;padding:.12rem 0;border-bottom:1px solid #fff1}
+.out2{background:#3a1212;color:#f4efe4;border:1px solid #c9a22744;padding:.35rem .55rem;border-radius:8px;font-size:.68rem}
 .gear{width:40px;height:40px;border-radius:50%;background:#2a1810;border:1px solid #c9a22755;color:#e8d48b;font-size:1.1rem}
 .livebox{background:#1a1a1a;border:1px solid #c9a22744;border-radius:10px;padding:.7rem;margin:.6rem 0}
 .livebox .p{display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid #fff1}
@@ -125,7 +131,7 @@ transition:background .4s}
 <button class="g" id="go" style="width:100%;max-width:320px;margin-top:.5rem">Entrer</button>
 <p class="err" id="er"></p></div></div>
 <div id="game" class="v">
-<div class="bar"><b id="who"></b><span id="solde"></span><span><button class="g" id="admBtn" style="display:none;padding:.35rem .6rem">Admin</button> <button id="leave" style="background:#4a2a16;color:#f4efe4;padding:.35rem .55rem">Lever</button> <button id="out" style="background:#333;color:#fff;padding:.35rem .6rem">Quitter</button></span></div>
+<div class="bar"><b id="who"></b><span id="solde"></span><span><button class="g" id="admBtn" style="display:none;padding:.35rem .6rem">Admin</button> <button id="leave" style="background:#4a2a16;color:#f4efe4;padding:.35rem .55rem">Lever</button> <button id="out" style="background:#333;color:#fff;padding:.35rem .6rem">Déconnexion</button></span></div>
 <div class="felt">
   <div class="felt-top"><div class="mini"><div class="mb"></div><span>TALON</span></div><div class="lab">CROUPIER</div><div class="mini"><div class="mb s"></div><span>SABOT</span></div></div>
   <div class="hand" id="dh"></div><div class="tot" id="dt"></div>
@@ -139,8 +145,12 @@ transition:background .4s}
 <div class="rail">
   <div class="rail-cell"><div class="rk">SOLDE</div><div class="rv" id="railSolde">0</div></div>
   <div class="rail-cell"><div class="rk">MISE</div><div class="rv" id="railMise">0</div></div>
-  <button class="gear" id="gear">⚙</button>
+  <div style="display:flex;gap:.35rem;align-items:center">
+    <button class="out2" id="out2">Déconnexion</button>
+    <button class="gear" id="gear">⚙</button>
+  </div>
 </div>
+<div class="hud" id="hud"><div id="hudTxt">Live…</div></div>
 <div class="dock"><div class="chips" id="chips"></div><div class="acts" id="acts"></div></div></div>
 <div id="admin" class="v"><div class="bar"><b>Régie</b><button class="g" id="back">Retour</button></div>
 <div class="livebox"><b>Live table</b><div id="liveGame">—</div></div>
@@ -154,7 +164,7 @@ function show(i){document.querySelectorAll('.v').forEach(x=>x.classList.remove('
 async function api(p,b){const o={method:b?'POST':'GET',headers:{'Content-Type':'application/json'}};if(token)o.headers.Authorization='Bearer '+token;if(b)o.body=JSON.stringify(b);const r=await fetch(p,o);const d=await r.json();if(r.status===401){token=null;localStorage.removeItem('bj.t');show('login');throw new Error('Session');}if(!r.ok)throw new Error(d.err||'Erreur');return d;}
 let seated=false, dealing=false, lastBet=0, autoT=null, actx=null;
 function beep(f,ms){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.07,t);g.gain.exponentialRampToValueAtTime(.001,t+(ms||.12));o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+(ms||.14));}catch(e){}}
-function sndCard(){beep(220,.06);setTimeout(()=>beep(410,.08),40);}function sndChip(){beep(160,.07);setTimeout(()=>beep(240,.08),45);}function sndWin(){beep(523,.1);setTimeout(()=>beep(659,.12),90);setTimeout(()=>beep(784,.16),180);}function sndLose(){beep(196,.16);setTimeout(()=>beep(147,.2),120);}
+function sndCard(){beep(180,.05);setTimeout(()=>beep(260,.07),30);setTimeout(()=>beep(140,.09),70);}function sndChip(){beep(160,.07);setTimeout(()=>beep(240,.08),45);}function sndWin(){beep(523,.1);setTimeout(()=>beep(659,.12),90);setTimeout(()=>beep(784,.16),180);}function sndLose(){beep(196,.16);setTimeout(()=>beep(147,.2),120);}
 const PIPS={A:[5],'2':[2,8],'3':[2,5,8],'4':[1,3,7,9],'5':[1,3,5,7,9],'6':[1,3,4,6,7,9],'7':[1,3,4,5,6,7,9],'8':[1,3,4,5,6,7,8,9],'9':[1,2,3,4,6,7,8,9],'10':[1,2,3,4,5,6,7,8,9]};
 function svgChip(v,col){const dash=[];for(let i=0;i<16;i++){const a=i*22.5;dash.push('<path d="M38 4 A34 34 0 0 1 38 4" stroke="none"/>');}
 return '<svg viewBox="0 0 76 76" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="g'+v+'" cx="35%" cy="30%"><stop offset="0%" stop-color="#fff6"/><stop offset="55%" stop-color="'+col+'"/><stop offset="100%" stop-color="#0006"/></radialGradient></defs><circle cx="38" cy="38" r="36" fill="#e8c76a"/><circle cx="38" cy="38" r="33" fill="'+col+'"/><g stroke="#fff" stroke-width="6" fill="none">'+Array.from({length:16},(_,i)=>{const a=i*22.5*Math.PI/180;const x1=38+Math.cos(a)*30,y1=38+Math.sin(a)*30,x2=38+Math.cos(a)*36,y2=38+Math.sin(a)*36;return '<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'"/>';}).join('')+'</g><circle cx="38" cy="38" r="24" fill="url(#g'+v+')"/><g stroke="#f1d48a" stroke-width=".6" opacity=".45">'+Array.from({length:16},(_,i)=>{const a=i*22.5*Math.PI/180;return '<line x1="38" y1="38" x2="'+(38+Math.cos(a)*23).toFixed(1)+'" y2="'+(38+Math.sin(a)*23).toFixed(1)+'"/>';}).join('')+'</g><path d="M28 28 L31 22 L34 28 L38 22 L42 28 L45 22 L48 28 L46 31 L30 31 Z" fill="#f3e2a6"/><text x="38" y="50" text-anchor="middle" font-size="16" font-weight="800" fill="#fff" font-family="Georgia,serif">'+v+'</text></svg>';}
@@ -163,8 +173,9 @@ if(!hid){const k=c.v+'<br>'+c.c;let mid='';
 if(PIPS[c.v]){mid='<div class="pips">'+[1,2,3,4,5,6,7,8,9].map(n=>'<span>'+(PIPS[c.v].includes(n)?c.c:'')+'</span>').join('')+'</div>';}
 else mid='<div class="pip">'+(c.v==='J'?'V':c.v==='Q'?'D':c.v)+c.c+'</div>';
 d.innerHTML='<div class="c1">'+k+'</div>'+mid+'<div class="c2">'+k+'</div>';}return d;}
-function banner(title,amt){const o=document.querySelector('.banner');if(o)o.remove();const b=document.createElement('div');b.className='banner';b.innerHTML='<b>'+title+'</b><span>'+amt+'</span>';document.body.appendChild(b);setTimeout(()=>b.remove(),1600);}
-function fillHand(el,cards){el.innerHTML='';(cards||[]).forEach(c=>el.appendChild(C(c)));}
+function totC(m){let t=0,a=0;for(const c of m||[]){if(!c||c.v==="?")continue;const v=(c.v==="A"?11:["J","Q","K","V","D","R"].includes(c.v)?10:+c.v);t+=v;if(c.v==="A")a++;}while(t>21&&a){t-=10;a--;}return t;}
+function banner(title,amt){const o=document.querySelector('.banner');if(o)o.remove();const b=document.createElement('div');b.className='banner';b.innerHTML='<b>'+title+'</b><span>'+amt+'</span>';document.body.appendChild(b);setTimeout(()=>b.remove(),1000);}
+function fillHand(el,cards){const n=(cards||[]).length;if(el.childElementCount===n)return;el.innerHTML='';(cards||[]).forEach((c,i)=>{const d=C(c);if(i<n-1)d.style.animation='none';el.appendChild(d);});}
 async function playBet(v){
   if(dealing) return;
   lastBet=v;
@@ -174,8 +185,11 @@ async function dealSeq(s){
   dealing=true;$('dh').innerHTML='';$('ph').innerHTML='';$('dt').textContent='';$('pt').textContent='';
   const D=s.dealer||[],P=s.player||[];
   const seq=[{w:'ph',c:P[0]},{w:'dh',c:D[0]},{w:'ph',c:P[1]},{w:'dh',c:D[1]}].filter(x=>x.c);
-  for(const step of seq){await new Promise(r=>setTimeout(r,280));sndCard();$(step.w).appendChild(C(step.c));}
-  $('dt').textContent=s.dtot!=null?s.dtot:'';$('pt').textContent=s.ptot!=null?s.ptot:'';
+  const seenD=[],seenP=[];
+  for(const step of seq){await new Promise(r=>setTimeout(r,220));sndCard();$(step.w).appendChild(C(step.c));
+    if(step.w==='ph'){seenP.push(step.c);$('pt').textContent=totC(seenP);}
+    else{seenD.push(step.c);$('dt').textContent=totC(seenD.filter(c=>c&&c.v!=='?'));}
+  }
   dealing=false;
 }
 async function revealDealer(s){
@@ -183,17 +197,19 @@ async function revealDealer(s){
   const D=s.dealer||[];
   const box=$('dh');
   const kids=[...box.children];
+  const shown=[D[0]].filter(Boolean);
   if(D[1]){
     if(kids[1]){kids[1].replaceWith(C(D[1]));sndCard();}
     else {box.appendChild(C(D[1]));sndCard();}
-    await new Promise(r=>setTimeout(r,260));
+    shown.push(D[1]);$('dt').textContent=totC(shown);
+    await new Promise(r=>setTimeout(r,280));
   }
   for(let i=2;i<D.length;i++){
     if(box.children[i]) continue;
-    await new Promise(r=>setTimeout(r,260));
-    sndCard();box.appendChild(C(D[i]));
+    await new Promise(r=>setTimeout(r,280));
+    sndCard();box.appendChild(C(D[i]));shown.push(D[i]);$('dt').textContent=totC(shown);
   }
-  $('dt').textContent=s.dtot!=null?s.dtot:'';
+  $('dt').textContent=s.dtot!=null?s.dtot:totC(D);
   dealing=false;
 }
 function ui(s,skipDeal){
@@ -237,22 +253,36 @@ function render(s){ui(s);}
 
 $('gear').onclick=()=>{const b=document.querySelector('#game .bar');if(b)b.style.display=b.style.display==='flex'?'none':'flex';};
 let liveT=null;
+
+function startHud(){
+  const h=$('hud'); if(h) h.classList.add('on');
+  if(liveT) clearInterval(liveT);
+  refreshLive(); liveT=setInterval(refreshLive,1000);
+}
+
 async function refreshLive(){
   try{
     const d=await api('/api/live');
     const gbox=$('liveGame');
     if(gbox) gbox.innerHTML=(d.joueur?('Joue: <b>'+d.joueur+'</b> · €'+(d.soldeJoueur||0)+' · mise €'+(d.bet||0)+' · '+d.phase+' · '+(d.msg||'')):'Personne a la table');
     const ls=$('liveSoldes'); if(ls){ls.innerHTML='';(d.comptes||[]).forEach(c=>{const r=document.createElement('div');r.className='p';r.innerHTML='<span>'+c.pseudo+(c.role==='admin'?' · admin':'')+'</span><b>€'+c.solde+'</b>';ls.appendChild(r);});}
+    const hud=$('hudTxt');
+    if(hud){
+      const people=(d.comptes||[]).map(c=>'<div class="line"><span>'+c.pseudo+'</span><b>€'+c.solde+'</b></div>').join('');
+      const play=d.joueur?('<div style="margin-bottom:.25rem">Table : <b>'+d.joueur+'</b> mise €'+(d.bet||0)+' · '+(d.phase||'')+' · '+(d.msg||'')+'</div>'):'<div style="margin-bottom:.25rem">Table libre</div>';
+      hud.innerHTML=play+people;
+    }
   }catch(e){}
 }
-$('go').onclick=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));}catch(e){$('er').textContent=e.message;}};
+$('go').onclick=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));if(moi.role==='admin') startHud();}catch(e){$('er').textContent=e.message;}};
 $('leave').onclick=async()=>{try{await api('/api/quitter',{});}catch(e){}seated=false;lastBet=0;if(autoT)clearTimeout(autoT);$('dh').innerHTML='';$('ph').innerHTML='';$('dt').textContent='';$('pt').textContent='';$('acts').innerHTML='';$('chips').innerHTML='';api('/api/etat').then(render);};
 $('seat').onclick=()=>{seated=true;api('/api/etat').then(render);};
-$('out').onclick=()=>{if(autoT)clearTimeout(autoT);lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
+$('out2')&&($('out2').onclick=()=>$('out').click());
+$('out').onclick=()=>{if(autoT)clearTimeout(autoT);if(liveT)clearInterval(liveT);const h=$('hud');if(h)h.classList.remove('on');lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
 $('admBtn').onclick=async()=>{show('admin');if(liveT)clearInterval(liveT);refreshLive();liveT=setInterval(refreshLive,1000);const d=await api('/api/admin');const m=$('modes');m.innerHTML='<h2>Mode</h2>';Object.entries(d.modes).forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.style.margin='.2rem';if(d.mode===k)b.className='g';b.onclick=async()=>{await api('/api/admin',{mode:k});$('admBtn').click();};m.appendChild(b);});
 const list=$('clist');list.innerHTML='';d.comptes.forEach(c=>{const r=document.createElement('div');r.className='row';r.innerHTML='<span>'+c.pseudo+' / '+c.code+' · €'+c.solde+'</span>';const i=document.createElement('input');i.type='number';i.placeholder='+/-';const ok=document.createElement('button');ok.className='g';ok.textContent='OK';ok.onclick=async()=>{await api('/api/admin',{jetons:{id:c.id,delta:+i.value||0}});$('admBtn').click();};r.appendChild(i);r.appendChild(ok);list.appendChild(r);});};
 $('ncBtn').onclick=async()=>{await api('/api/admin',{nouveau:{pseudo:$('np').value,code:$('nc').value,solde:+$('ns').value||2000}});$('admBtn').click();};
 $('back').onclick=async()=>{if(liveT)clearInterval(liveT);show('game');render(await api('/api/etat'));};
-if(token){api('/api/etat').then(s=>{moi={pseudo:s.pseudo,role:s.role,solde:s.solde};$('admBtn').style.display=s.role==='admin'?'inline':'none';show('game');render(s);}).catch(()=>{});}
+if(token){api('/api/etat').then(s=>{moi={pseudo:s.pseudo,role:s.role,solde:s.solde};$('admBtn').style.display=s.role==='admin'?'inline':'none';show('game');render(s);if(s.role==='admin') startHud();}).catch(()=>{});}
 </script></body></html>`;
 http.createServer(async(req,res)=>{const p=new URL(req.url,'http://x').pathname;if(p.startsWith('/api/'))return api(req,res,p);res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(PAGE);}).listen(PORT,()=>console.log('BJ',PORT));
