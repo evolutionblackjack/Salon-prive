@@ -876,7 +876,7 @@ input{font-family:inherit}
     <div class="splash-title">BLACKJACK<br>ÉVOLUTION</div>
     <div class="splash-sub">TABLES PRIVÉES · JETONS FICTIFS</div>
     <div class="splash-line"></div>
-    <button class="btn-gold" id="btnEnterSplash">ENTRER</button>
+    <button class="btn-gold" id="btnEnterSplash" onclick="document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on')});document.getElementById('login').classList.add('on')">ENTRER</button>
     <p class="splash-note">ACCÈS SUR INVITATION</p>
   </div>
 </div>
@@ -1115,7 +1115,7 @@ function renderTable(t){
   t.sieges.forEach(s=>{
     const el=document.createElement('div');
     el.className='seat'+(s.estMoi?' mine':'')+(s.pseudo?'':' empty')+(t.tourSiege===s.index?' turn':'');
-    el.innerHTML='<div class="sn">'+(s.pseudo||'S\'asseoir')+'</div><div class="sm">'+(s.mise?'€'+s.mise:(s.pseudo?'—':'·'))+(s.tot!=null && !s.estMoi?' · '+s.tot:'')+'</div>';
+    el.innerHTML='<div class="sn">'+(s.pseudo||'Place')+'</div><div class="sm">'+(s.mise?'€'+s.mise:(s.pseudo?'—':'·'))+(s.tot!=null && !s.estMoi?' · '+s.tot:'')+'</div>';
     if(!s.pseudo && (t.phase==='attente'||t.phase==='mises'||t.phase==='fin')){
       el.style.cursor='pointer';
       el.onclick=async()=>{try{ensureAudio(); await api('POST','/api/table/'+tableId+'/asseoir',{siege:s.index}); refreshTable();}catch(e){alert(e.message);}};
