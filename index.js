@@ -11,7 +11,7 @@ function bj(m){return m&&m.length===2&&tot(m)===21;}
 function pair(m){const r=c=>['10','J','Q','K'].includes(c.v)?'10':c.v;return m&&m.length===2&&r(m[0])===r(m[1]);}
 const g={sabot:shoe(),dealer:[],player:[],split:null,which:0,bet:0,bet2:0,phase:'bet',msg:'Choisis une mise',result:'',uid:null};
 function draw(forD,pTot){if(g.sabot.length<30)g.sabot=shoe();const bh={bingo:.9,gros_gain:.75,gain:.65}[mode];const ph={pipo:.9,grosse_perte:.75,perte:.65}[mode];const p=bh||ph;if(!p||Math.random()>p)return g.sabot.pop();const want=!!bh;const sl=g.sabot.slice(-10);let pick;if(forD){const tc=tot(g.dealer);pick=sl.sort((a,b)=>want?(tc<17?val(b)-val(a):Math.abs(21-tc-val(a))-Math.abs(21-tc-val(b))):(tc>=12&&tc<=16?val(b)-val(a):val(a)-val(b)))[0];}else{const tj=pTot==null?tot(g.player):pTot;pick=sl.sort((a,b)=>want?(tj>=12&&tj<=16?val(b)-val(a):val(a)-val(b)):Math.abs(21-tj-val(a))-Math.abs(21-tj-val(b)))[0];}const i=g.sabot.lastIndexOf(pick);if(i>=0)g.sabot.splice(i,1);else return g.sabot.pop();return pick;}
-function pub(moi){const hide=g.phase==='play'&&g.dealer[1];return{phase:g.phase,msg:g.msg,result:g.result,bet:g.bet,dealer:g.dealer.map((c,i)=>hide&&i===1?{v:'?',c:'?'}:c),dtot:hide?val(g.dealer[0]||{v:'0'}):(g.dealer.length?tot(g.dealer):null),player:g.player,ptot:g.player.length?tot(g.player):null,split:g.split,which:g.which,canSplit:pair(g.player)&&!g.split&&g.phase==='play'&&g.player.length===2,solde:moi.solde,pseudo:moi.pseudo,role:moi.role};}
+function pub(moi){const hide=g.phase==='play'&&g.dealer[1];return{phase:g.phase,msg:g.msg,result:g.result,bet:g.bet,dealer:g.dealer.map((c,i)=>hide&&i===1?{v:'?',c:'?'}:c),dtot:hide?val(g.dealer[0]||{v:'0'}):(g.dealer.length?tot(g.dealer):null),player:g.player,ptot:g.player.length?tot(g.player):null,split:g.split,which:g.which,canSplit:pair(g.player)&&!g.split&&g.phase==='play'&&g.player.length===2,canDouble:g.phase==='play'&&((g.which===1&&g.split)?g.split.length===2:g.player.length===2)&&moi.solde>=((g.which===1&&g.split)?(g.bet2||g.bet):g.bet),solde:moi.solde,pseudo:moi.pseudo,role:moi.role};}
 function settle(hand,bet,c){const pj=tot(hand),dj=tot(g.dealer);if(pj>21)return'perdu';if(bj(hand)&&!bj(g.dealer)){c.solde+=Math.floor(bet*2.5);return'blackjack';}if(dj>21||pj>dj){c.solde+=bet*2;return'gagne';}if(pj===dj){c.solde+=bet;return'egalite';}return'perdu';}
 function finish(c){const pOut=tot(g.player)>21&&(!g.split||tot(g.split)>21);if(!pOut){while(tot(g.dealer)<17)g.dealer.push(draw(true));}let t=settle(g.player,g.bet,c);if(g.split)t+=' / '+settle(g.split,g.bet2,c);g.phase='end';g.result=t;g.msg=t.includes('gagne')||t.includes('blackjack')?'Gagné':t.includes('egalite')?'Égalité':'Perdu';}
 function me(req){const h=req.headers.authorization||'';const t=h.startsWith('Bearer ')?h.slice(7):null;return t&&sessions.has(t)?comptes.get(sessions.get(t)):null;}
@@ -47,7 +47,7 @@ input{width:100%;max-width:320px;padding:.8rem;margin:.3rem 0;border:1px solid #
 button{border:0;border-radius:8px;padding:.7rem 1rem;font-weight:700}
 .g{background:linear-gradient(#e8d48b,#b8860b);color:#1a1205}.err{color:#f87171;min-height:1.2em}
 .bar{display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;background:#07110c}
-.felt{flex:1;padding:.7rem .6rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.35rem;background:radial-gradient(ellipse at 50% 30%,#7a2030,#4a1020 55%,#2a0a12)}
+.felt{flex:1;padding:.7rem .6rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.35rem;background:radial-gradient(ellipse at 50% 30%,#1f6b48,#0d3a2a 55%,#08241a)}
 .lab{font-size:.65rem;letter-spacing:.18em;opacity:.7;color:#f0d9a0}
 .hand{display:flex;gap:.3rem;min-height:82px}
 .card{width:62px;height:90px;border-radius:8px;background:linear-gradient(#fff,#f6f0e4);color:#1a1208;position:relative;box-shadow:0 10px 16px #0007,inset 0 0 0 1px #e4d9c4;animation:deal .4s ease}
@@ -144,13 +144,13 @@ function ui(s,skipDeal){
   if(s.phase==='end'&&(s.result==='gagne'||s.result==='blackjack')){sndWin();banner(s.result==='blackjack'?'BLACKJACK':'YOU WIN',s.bet||0);}
   if(s.phase==='end'&&s.result==='perdu') banner('YOU LOSE',0);
   if((s.phase==='bet'||s.phase==='end')&&seated){
-    [10,25,50].forEach(v=>{const b=document.createElement('button');b.className='chip c'+v+(lastBet===v?' sel':'');b.textContent=v;b.onclick=()=>{lastBet=v;sndChip();const mid=$('chipon');mid.textContent=v;mid.className='chipon on'+v;};chips.appendChild(b);});
+    [10,25,50].forEach(v=>{const b=document.createElement('button');b.className='chip c'+v+(lastBet===v?' sel':'');b.textContent='♛ '+v;b.onclick=()=>{lastBet=v;sndChip();const mid=$('chipon');mid.textContent=v;mid.className='chipon on'+v;};chips.appendChild(b);});
     const go=document.createElement('button');go.className='p';go.style.minWidth='160px';go.style.fontSize='1rem';
     go.textContent=s.phase==='end'?'REJOUER':'JOUER';
     go.onclick=()=>{if(!lastBet){alert('Tape d abord un jeton (10 25 50)');return;}playBet(lastBet);};
     acts.appendChild(go);
   }
-  if(s.phase==='play'){[['Tirer','hit'],['Doubler','double'],['Rester','stand']].forEach(([l,a],i)=>{const b=document.createElement('button');if(i===2)b.className='p';b.textContent=l;b.onclick=async()=>{if(window._act)return;window._act=1;try{const ns=await api('/api/action',{action:a});
+  if(s.phase==='play'){const actsList=[['Tirer','hit']];if(s.canDouble)actsList.push(['Doubler','double']);actsList.push(['Rester','stand']);actsList.forEach(([l,a],i)=>{const b=document.createElement('button');if(a==='stand')b.className='p';if(a==='double'){b.className='p';b.style.background='#1e5a9c';b.style.color='#fff';}b.textContent=l;b.onclick=async()=>{if(window._act)return;window._act=1;try{const ns=await api('/api/action',{action:a});
       if(a==='hit'&&ns.phase==='play'){const hand=ns.which===1&&ns.split?ns.split:ns.player;const last=hand[hand.length-1];sndCard();$('ph').appendChild(C(last));$('pt').textContent=ns.ptot!=null?ns.ptot:'';moi.solde=ns.solde;$('solde').textContent='€'+ns.solde;window._act=0;return;}
       if(ns.phase==='end'){if(a==='hit'){const last=(ns.player||[]).slice(-1)[0];if(last)$('ph').appendChild(C(last));}await revealDealer(ns);ui(ns,true);}
       else ui(ns);
