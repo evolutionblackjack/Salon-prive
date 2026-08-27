@@ -59,6 +59,15 @@ function isBJ(main) {
   return main.length === 2 && tot(main) === 21;
 }
 
+function rangSplit(c) {
+  if (['10', 'J', 'Q', 'K'].includes(c.v)) return '10';
+  return c.v;
+}
+
+function peutSeparer(main) {
+  return main && main.length === 2 && rangSplit(main[0]) === rangSplit(main[1]);
+}
+
 function emptySeat() {
   return {
     joueurId: null,
@@ -272,11 +281,15 @@ function publicTable(table, viewer) {
       mise: s.mise,
       main: s.main,
       tot: s.main.length ? tot(s.main) : null,
+      main2: s.main2 || null,
+      tot2: s.main2 && s.main2.length ? tot(s.main2) : null,
+      mise2: s.mise2 || 0,
       statut: s.statut,
       resultat: s.resultat,
       message: s.message,
       gainAffiche: s.gainAffiche || 0,
-      estMoi: viewer ? s.joueurId === viewer.id : false
+      estMoi: viewer ? s.joueurId === viewer.id : false,
+      peutSeparer: peutSeparer(s.main) && !s.main2
     }))
   };
 }
@@ -352,6 +365,12 @@ function finirCroupierEtRegler(table) {
     if (s.statut === 'vide') continue;
     const c = comptes.get(s.joueurId);
     settleSiege(table, s, c);
+    if (s.main2 && s.main2.length) {
+      const tmp = { main: s.main2, mise: s.mise2 || s.mise, pseudo: s.pseudo, message: '', resultat: null };
+      settleSiege(table, tmp, c);
+      s.message2 = tmp.message;
+      s.resultat2 = tmp.resultat;
+    }
   }
 }
 
@@ -537,7 +556,10 @@ async function handleApi(req, res, path) {
       for (const s of table.sieges) {
         if (s.joueurId) {
           s.main = [];
+          s.main2 = null;
           s.mise = 0;
+          s.mise2 = 0;
+          s.jeuMain = 1;
           s.resultat = null;
           s.message = '';
           s.statut = 'assis';
@@ -593,7 +615,10 @@ async function handleApi(req, res, path) {
       for (const s of table.sieges) {
         if (s.joueurId) {
           s.main = [];
+          s.main2 = null;
           s.mise = 0;
+          s.mise2 = 0;
+          s.jeuMain = 1;
           s.resultat = null;
           s.message = '';
           s.statut = 'assis';
@@ -610,16 +635,27 @@ async function handleApi(req, res, path) {
       return send(res, 400, { erreur: 'Pas votre tour' });
     }
 
+    const courante = seat.jeuMain === 2 && seat.main2 ? 'main2' : 'main';
     if (action === 'tirer') {
-      seat.main.push(tirer(table, false, { totJoueur: tot(seat.main) }));
-      if (tot(seat.main) > 21) {
-        seat.statut = 'creve';
-        seat.message = 'Perdu';
-        nextPlayerOrDealer(table);
+      seat[courante].push(tirer(table, false, { totJoueur: tot(seat[courante]) }));
+      if (tot(seat[courante]) > 21) {
+        if (courante === 'main' && seat.main2) {
+          seat.jeuMain = 2;
+          table.message = 'Main 2 — ' + seat.pseudo;
+        } else {
+          seat.statut = 'creve';
+          seat.message = 'Perdu';
+          nextPlayerOrDealer(table);
+        }
       }
     } else if (action === 'rester') {
-      seat.statut = 'reste';
-      nextPlayerOrDealer(table);
+      if (courante === 'main' && seat.main2) {
+        seat.jeuMain = 2;
+        table.message = 'Main 2 — ' + seat.pseudo;
+      } else {
+        seat.statut = 'reste';
+        nextPlayerOrDealer(table);
+      }
     } else if (action === 'doubler') {
       if (seat.main.length !== 2) return send(res, 400, { erreur: 'Double sur 2 cartes' });
       if (moi.solde < seat.mise) return send(res, 400, { erreur: 'Solde insuffisant' });
@@ -629,6 +665,17 @@ async function handleApi(req, res, path) {
       seat.statut = tot(seat.main) > 21 ? 'creve' : 'reste';
       if (seat.statut === 'creve') seat.message = 'Perdu';
       nextPlayerOrDealer(table);
+    } else if (action === 'separer') {
+      if (!peutSeparer(seat.main) || seat.main2) return send(res, 400, { erreur: 'Séparation impossible' });
+      if (moi.solde < seat.mise) return send(res, 400, { erreur: 'Solde insuffisant' });
+      moi.solde -= seat.mise;
+      const c2 = seat.main.pop();
+      seat.main2 = [c2];
+      seat.mise2 = seat.mise;
+      seat.jeuMain = 1;
+      seat.main.push(tirer(table, false, { totJoueur: tot(seat.main) }));
+      seat.main2.push(tirer(table, false, { totJoueur: tot(seat.main2) }));
+      table.message = 'Main 1 — ' + (seat.pseudo || '');
     } else {
       return send(res, 400, { erreur: 'Action inconnue' });
     }
@@ -711,7 +758,7 @@ const HTML = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Salon Privé · Blackjack</title>
+<title>Blackjack Évolution</title>
 <style>
 :root{--or:#c9a227;--or2:#e8d48b;--bg:#0a0604;--feutre:#0d3d2e;--feutre2:#0a2a20;--card:#f7f3eb;--danger:#c45c5c}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -768,9 +815,9 @@ input{font-family:inherit}
 .dealer-zone{text-align:center;width:100%}
 .lib{font-size:.58rem;letter-spacing:.2em;opacity:.5;text-transform:uppercase;margin-bottom:.35rem;color:#c8e6d5}
 .cartes{display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap;min-height:68px}
-.carte{width:48px;height:68px;border-radius:6px;background:linear-gradient(180deg,#fffef8,#f0ebe0);color:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;box-shadow:0 4px 10px rgba(0,0,0,.4);animation:deal .28s ease;border:1px solid rgba(0,0,0,.08)}
+.carte{width:54px;height:76px;border-radius:6px;background:linear-gradient(180deg,#fff,#f3efe6);color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:1.05rem;box-shadow:0 4px 10px rgba(0,0,0,.35);animation:deal .28s ease;border:1px solid #ddd}
 .carte.r{color:#c41e3a}
-.carte.x{background:linear-gradient(145deg,#1a4a7a,#0e2a48);color:transparent;border:1px solid rgba(201,162,39,.4)}
+.carte.x{background:repeating-linear-gradient(45deg,#8b1e2d 0 6px,#6e1522 6px 12px);color:transparent;border:2px solid #fff}
 @keyframes deal{from{opacity:0;transform:translateY(-14px) scale(.88)}to{opacity:1;transform:none}}
 .tot{display:inline-block;background:rgba(0,0,0,.45);color:#fff;font-size:.85rem;margin-top:.35rem;min-height:1.2em;padding:.15rem .55rem;border-radius:12px;font-weight:600}
 .msg-center{color:#e8f5e9;text-align:center;padding:.45rem .6rem;font-size:.88rem;min-height:2.2em;letter-spacing:.03em;text-shadow:0 1px 4px rgba(0,0,0,.5)}
@@ -826,11 +873,11 @@ input{font-family:inherit}
 <div id="splash" class="page on">
   <div>
     <div class="splash-logo">21</div>
-    <div class="splash-title">SALON PRIVÉ</div>
-    <div class="splash-sub">BLACKJACK</div>
+    <div class="splash-title">BLACKJACK<br>ÉVOLUTION</div>
+    <div class="splash-sub">TABLES PRIVÉES · JETONS FICTIFS</div>
     <div class="splash-line"></div>
     <button class="btn-gold" id="btnEnterSplash">ENTRER</button>
-    <p class="splash-note">ACCÈS SUR INVITATION · JETONS FICTIFS</p>
+    <p class="splash-note">ACCÈS SUR INVITATION</p>
   </div>
 </div>
 
@@ -849,7 +896,7 @@ input{font-family:inherit}
 
 <div id="lobby" class="page">
   <div class="topbar">
-    <div class="brand">SALON PRIVÉ</div>
+    <div class="brand">BLACKJACK ÉVOLUTION</div>
     <div class="info">
       <span id="lobbyPseudo">—</span>
       <span class="solde" id="lobbySolde">0</span>
@@ -1054,6 +1101,12 @@ function renderTable(t){
     my.main.forEach(c=>wrap.appendChild(carteEl(c)));
     mh.appendChild(wrap);
     if(my.tot!=null){const totEl=document.createElement('div'); totEl.className='tot'; totEl.textContent=my.tot; mh.appendChild(totEl);}
+    if(my.main2 && my.main2.length){
+      const wrap2=document.createElement('div'); wrap2.className='cartes'; wrap2.style.marginTop='8px';
+      my.main2.forEach(c=>wrap2.appendChild(carteEl(c)));
+      mh.appendChild(wrap2);
+      if(my.tot2!=null){const totEl=document.createElement('div'); totEl.className='tot'; totEl.textContent='2 · '+my.tot2; mh.appendChild(totEl);}
+    }
   }
   const sig=(t.croupier||[]).map(c=>c.v+c.c).join('')+'|'+(my&&my.main?my.main.map(c=>c.v+c.c).join(''):'');
   if(sig!==lastCardSig && sig.length>lastCardSig.length) playCardSound();
@@ -1108,7 +1161,10 @@ function renderTable(t){
     });
   }
   if(my && t.phase==='jeu' && t.tourSiege===my.index && my.statut==='en_jeu'){
-    [['Tirer','tirer'],['Doubler','doubler'],['Rester','rester',1]].forEach(([l,a,p])=>{
+    const btns=[['Tirer','tirer'],['Doubler','doubler']];
+    if(my.peutSeparer) btns.push(['Séparer','separer']);
+    btns.push(['Rester','rester',1]);
+    btns.forEach(([l,a,p])=>{
       const b=document.createElement('button'); b.textContent=l; if(p) b.className='p';
       b.onclick=async()=>{try{ensureAudio(); playCardSound(); await api('POST','/api/table/'+tableId+'/action',{action:a}); refreshTable();}catch(e){alert(e.message);}};
       acts.appendChild(b);
@@ -1213,6 +1269,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log('Salon Privé v2 → port ' + PORT);
+  console.log('Blackjack Évolution → port ' + PORT);
   console.log('Admin: Patron / admin21');
 });
