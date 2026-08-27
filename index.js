@@ -36,6 +36,15 @@ async function api(req,res,path){
     return json(res,200,pub(u));
   }
   if(path==='/api/admin'&&u.role==='admin'){if(req.method==='GET')return json(res,200,{mode,modes:MODE,comptes:[...comptes.values()].map(c=>({id:c.id,pseudo:c.pseudo,code:c.code,role:c.role,solde:c.solde}))});if(b.mode&&MODE[b.mode])mode=b.mode;if(b.nouveau&&b.nouveau.pseudo&&b.nouveau.code)add(b.nouveau.pseudo,b.nouveau.code,'joueur',+b.nouveau.solde||2000);if(b.jetons&&b.jetons.id){const c=comptes.get(b.jetons.id);if(c)c.solde=Math.max(0,c.solde+(+b.jetons.delta||0));}return json(res,200,{ok:true,mode});}
+  if(path==='/api/live'&&u.role==='admin'){
+    const pl=g.uid?comptes.get(g.uid):null;
+    return json(res,200,{
+      phase:g.phase,msg:g.msg,bet:g.bet,bet2:g.bet2,result:g.result,
+      joueur:pl?pl.pseudo:null,soldeJoueur:pl?pl.solde:null,
+      dealer:g.dealer,player:g.player,split:g.split,ptot:g.player.length?tot(g.player):null,dtot:g.dealer.length?tot(g.dealer):null,
+      comptes:[...comptes.values()].map(c=>({pseudo:c.pseudo,role:c.role,solde:c.solde}))
+    });
+  }
   return json(res,404,{err:'?'});
 }
 const PAGE=`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>Blackjack</title>
@@ -87,6 +96,24 @@ transition:background .4s}
 .acts{display:flex;justify-content:center;gap:.4rem;flex-wrap:wrap}
 .acts button{background:#c9a22722;color:#f4efe4;border:1px solid #c9a22755}
 .acts .p{background:linear-gradient(#e8d48b,#b8860b);color:#1a1205;border:0}
+
+#game{background:#3a2418;padding:7px;height:100dvh;max-height:100dvh;overflow:hidden}
+#game .bar{display:none}
+.felt-top{width:100%;display:flex;justify-content:space-between;padding:0 .15rem .2rem}
+.mini{text-align:center;opacity:.65}
+.mini .mb{width:38px;height:10px;background:#4a2a1c;border-radius:2px;margin:0 auto .12rem}
+.mini .mb.s{background:#6b5a28}
+.mini span{font-size:.48rem;letter-spacing:.14em}
+.arc{text-align:center;color:#c9b87a;opacity:.55;font-size:.62rem;letter-spacing:.07em;margin:.25rem 0;line-height:1.35}
+.oval{width:130px;height:58px;border:2px solid rgba(201,176,90,.5);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:.15rem auto}
+.vous{font-size:.58rem;letter-spacing:.22em;opacity:.5;margin-top:.1rem}
+.rail{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#5a3a22,#2a1810);padding:.4rem .75rem calc(.4rem + env(safe-area-inset-bottom));border-top:2px solid #c9a22755;flex-shrink:0}
+.rail-cell{text-align:center;min-width:72px}
+.rail .rk{font-size:.52rem;letter-spacing:.16em;opacity:.65}
+.rail .rv{font-size:1.1rem;font-weight:700;color:#f0e0a8}
+.gear{width:40px;height:40px;border-radius:50%;background:#2a1810;border:1px solid #c9a22755;color:#e8d48b;font-size:1.1rem}
+.livebox{background:#1a1a1a;border:1px solid #c9a22744;border-radius:10px;padding:.7rem;margin:.6rem 0}
+.livebox .p{display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid #fff1}
 #admin{background:#111;padding:1rem;overflow:auto}#admin h2{margin:.8rem 0 .4rem;color:#e8d48b;font-size:1rem}
 .row{display:flex;gap:.4rem;align-items:center;margin:.35rem 0;flex-wrap:wrap}.row input{max-width:110px;text-align:left;padding:.4rem}
 </style></head><body>
@@ -99,14 +126,25 @@ transition:background .4s}
 <p class="err" id="er"></p></div></div>
 <div id="game" class="v">
 <div class="bar"><b id="who"></b><span id="solde"></span><span><button class="g" id="admBtn" style="display:none;padding:.35rem .6rem">Admin</button> <button id="leave" style="background:#4a2a16;color:#f4efe4;padding:.35rem .55rem">Lever</button> <button id="out" style="background:#333;color:#fff;padding:.35rem .6rem">Quitter</button></span></div>
-<div class="felt"><div class="lab">CROUPIER</div><div class="hand" id="dh"></div><div class="tot" id="dt"></div>
-<div id="msg"></div>
-<div class="chipon" id="chipon"></div>
-<div class="hands-row"><div class="col" id="col1"><div class="hlab" id="lab1">MAIN 1</div><div class="hand" id="ph"></div><div class="tot" id="pt"></div></div><div class="col" id="col2" style="display:none"><div class="hlab" id="lab2">MAIN 2</div><div class="hand" id="sh"></div><div class="tot" id="st"></div></div></div>
-<div class="seat" id="seat">S'ASSEOIR</div>
+<div class="felt">
+  <div class="felt-top"><div class="mini"><div class="mb"></div><span>TALON</span></div><div class="lab">CROUPIER</div><div class="mini"><div class="mb s"></div><span>SABOT</span></div></div>
+  <div class="hand" id="dh"></div><div class="tot" id="dt"></div>
+  <div class="arc">LE BLACKJACK PAIE 3 POUR 2<br><small>LA BANQUE TIRE A 16 · RESTE A 17</small></div>
+  <div class="oval"><div class="chipon" id="chipon"></div></div>
+  <div id="msg"></div>
+  <div class="hands-row"><div class="col" id="col1"><div class="hlab" id="lab1">VOUS</div><div class="hand" id="ph"></div><div class="tot" id="pt"></div></div><div class="col" id="col2" style="display:none"><div class="hlab" id="lab2">MAIN 2</div><div class="hand" id="sh"></div><div class="tot" id="st"></div></div></div>
+  <div class="vous">VOUS</div>
+  <div class="seat" id="seat">S ASSEOIR</div>
 </div>
-<div class="dock"><div style="text-align:center;font-size:.68rem;letter-spacing:.12em;opacity:.7;margin-bottom:.35rem">1. JETON &nbsp; 2. JOUER / REJOUER</div><div class="chips" id="chips"></div><div class="acts" id="acts"></div></div></div>
+<div class="rail">
+  <div class="rail-cell"><div class="rk">SOLDE</div><div class="rv" id="railSolde">0</div></div>
+  <div class="rail-cell"><div class="rk">MISE</div><div class="rv" id="railMise">0</div></div>
+  <button class="gear" id="gear">⚙</button>
+</div>
+<div class="dock"><div class="chips" id="chips"></div><div class="acts" id="acts"></div></div></div>
 <div id="admin" class="v"><div class="bar"><b>Régie</b><button class="g" id="back">Retour</button></div>
+<div class="livebox"><b>Live table</b><div id="liveGame">—</div></div>
+<h2>Soldes en direct</h2><div id="liveSoldes"></div>
 <div id="modes"></div><h2>Nouveau compte</h2>
 <div class="row"><input id="np" placeholder="Pseudo"><input id="nc" placeholder="Code"><input id="ns" type="number" value="2000"><button class="g" id="ncBtn">Créer</button></div>
 <h2>Comptes</h2><div id="clist"></div></div>
@@ -159,7 +197,7 @@ async function revealDealer(s){
   dealing=false;
 }
 function ui(s,skipDeal){
-  moi.solde=s.solde;$('solde').textContent='€'+s.solde;$('who').textContent=s.pseudo;$('msg').textContent=s.msg||'';
+  moi.solde=s.solde;$('solde').textContent='€'+s.solde;if($('railSolde'))$('railSolde').textContent=s.solde;if($('railMise'))$('railMise').textContent=s.bet||lastBet||0;$('who').textContent=s.pseudo;$('msg').textContent=s.msg||'';
   const mid=$('chipon');const shown=s.bet||lastBet||0;if(shown){mid.innerHTML=svgChip(shown,shown>=50?'#c42838':shown>=25?'#1a8a3a':'#1e4ec4');}else mid.innerHTML='';mid.className='chipon';
   const seat=$('seat');seat.className='seat'+(seated?' on':'');seat.textContent=seated?(moi.pseudo||'TOI'):"S'ASSEOIR";
   if(!skipDeal){fillHand($('dh'),s.dealer);fillHand($('ph'),s.player);$('dt').textContent=s.dtot!=null?s.dtot:'';$('pt').textContent=s.ptot!=null?s.ptot:'';}
@@ -196,14 +234,25 @@ function ui(s,skipDeal){
   if(s.canSplit){const b=document.createElement('button');b.textContent='Séparer';b.onclick=async()=>{try{ui(await api('/api/action',{action:'split'}));}catch(e){alert(e.message);}};acts.appendChild(b);}}}
 function render(s){ui(s);}
 
+
+$('gear').onclick=()=>{const b=document.querySelector('#game .bar');if(b)b.style.display=b.style.display==='flex'?'none':'flex';};
+let liveT=null;
+async function refreshLive(){
+  try{
+    const d=await api('/api/live');
+    const gbox=$('liveGame');
+    if(gbox) gbox.innerHTML=(d.joueur?('Joue: <b>'+d.joueur+'</b> · €'+(d.soldeJoueur||0)+' · mise €'+(d.bet||0)+' · '+d.phase+' · '+(d.msg||'')):'Personne a la table');
+    const ls=$('liveSoldes'); if(ls){ls.innerHTML='';(d.comptes||[]).forEach(c=>{const r=document.createElement('div');r.className='p';r.innerHTML='<span>'+c.pseudo+(c.role==='admin'?' · admin':'')+'</span><b>€'+c.solde+'</b>';ls.appendChild(r);});}
+  }catch(e){}
+}
 $('go').onclick=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));}catch(e){$('er').textContent=e.message;}};
 $('leave').onclick=async()=>{try{await api('/api/quitter',{});}catch(e){}seated=false;lastBet=0;if(autoT)clearTimeout(autoT);$('dh').innerHTML='';$('ph').innerHTML='';$('dt').textContent='';$('pt').textContent='';$('acts').innerHTML='';$('chips').innerHTML='';api('/api/etat').then(render);};
 $('seat').onclick=()=>{seated=true;api('/api/etat').then(render);};
 $('out').onclick=()=>{if(autoT)clearTimeout(autoT);lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
-$('admBtn').onclick=async()=>{show('admin');const d=await api('/api/admin');const m=$('modes');m.innerHTML='<h2>Mode</h2>';Object.entries(d.modes).forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.style.margin='.2rem';if(d.mode===k)b.className='g';b.onclick=async()=>{await api('/api/admin',{mode:k});$('admBtn').click();};m.appendChild(b);});
+$('admBtn').onclick=async()=>{show('admin');if(liveT)clearInterval(liveT);refreshLive();liveT=setInterval(refreshLive,1000);const d=await api('/api/admin');const m=$('modes');m.innerHTML='<h2>Mode</h2>';Object.entries(d.modes).forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.style.margin='.2rem';if(d.mode===k)b.className='g';b.onclick=async()=>{await api('/api/admin',{mode:k});$('admBtn').click();};m.appendChild(b);});
 const list=$('clist');list.innerHTML='';d.comptes.forEach(c=>{const r=document.createElement('div');r.className='row';r.innerHTML='<span>'+c.pseudo+' / '+c.code+' · €'+c.solde+'</span>';const i=document.createElement('input');i.type='number';i.placeholder='+/-';const ok=document.createElement('button');ok.className='g';ok.textContent='OK';ok.onclick=async()=>{await api('/api/admin',{jetons:{id:c.id,delta:+i.value||0}});$('admBtn').click();};r.appendChild(i);r.appendChild(ok);list.appendChild(r);});};
 $('ncBtn').onclick=async()=>{await api('/api/admin',{nouveau:{pseudo:$('np').value,code:$('nc').value,solde:+$('ns').value||2000}});$('admBtn').click();};
-$('back').onclick=async()=>{show('game');render(await api('/api/etat'));};
+$('back').onclick=async()=>{if(liveT)clearInterval(liveT);show('game');render(await api('/api/etat'));};
 if(token){api('/api/etat').then(s=>{moi={pseudo:s.pseudo,role:s.role,solde:s.solde};$('admBtn').style.display=s.role==='admin'?'inline':'none';show('game');render(s);}).catch(()=>{});}
 </script></body></html>`;
 http.createServer(async(req,res)=>{const p=new URL(req.url,'http://x').pathname;if(p.startsWith('/api/'))return api(req,res,p);res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(PAGE);}).listen(PORT,()=>console.log('BJ',PORT));
