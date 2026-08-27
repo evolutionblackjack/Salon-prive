@@ -174,7 +174,7 @@ else mid='<div class="pip">'+(c.v==='J'?'V':c.v==='Q'?'D':c.v)+c.c+'</div>';
 d.innerHTML='<div class="c1">'+k+'</div>'+mid+'<div class="c2">'+k+'</div>';}return d;}
 function totC(m){let t=0,a=0;for(const c of m||[]){if(!c||c.v==="?")continue;const v=(c.v==="A"?11:["J","Q","K","V","D","R"].includes(c.v)?10:+c.v);t+=v;if(c.v==="A")a++;}while(t>21&&a){t-=10;a--;}return t;}
 function banner(title,amt){const o=document.querySelector('.banner');if(o)o.remove();const b=document.createElement('div');b.className='banner';b.innerHTML='<b>'+title+'</b><span>'+amt+'</span>';document.body.appendChild(b);setTimeout(()=>b.remove(),1000);}
-function fillHand(el,cards){const n=(cards||[]).length;if(el.childElementCount===n)return;el.innerHTML='';(cards||[]).forEach((c,i)=>{const d=C(c);if(i<n-1)d.style.animation='none';el.appendChild(d);});}
+function fillHand(el,cards){el.innerHTML='';(cards||[]).forEach((c,i,a)=>{const d=C(c);if(i<a.length-1)d.style.animation='none';el.appendChild(d);});}
 async function playBet(v){
   if(dealing) return;
   lastBet=v;
@@ -215,16 +215,20 @@ function ui(s,skipDeal){
   moi.solde=s.solde;$('solde').textContent='€'+s.solde;if($('railSolde'))$('railSolde').textContent=s.solde;if($('railMise'))$('railMise').textContent=s.bet||lastBet||0;$('who').textContent=s.pseudo;$('msg').textContent=s.msg||'';
   const mid=$('chipon');const shown=s.bet||lastBet||0;if(shown){mid.innerHTML=svgChip(shown,shown>=50?'#c42838':shown>=25?'#1a8a3a':'#1e4ec4');}else mid.innerHTML='';mid.className='chipon';
   const seat=$('seat');seat.className='seat'+(seated?' on':'');seat.textContent=seated?(moi.pseudo||'TOI'):"S'ASSEOIR";
-  if(!skipDeal){fillHand($('dh'),s.dealer);fillHand($('ph'),s.player);$('dt').textContent=s.dtot!=null?s.dtot:'';$('pt').textContent=s.ptot!=null?s.ptot:'';}
+  const HS=s.hands&&s.hands.length?s.hands:[{cards:s.player,bet:s.bet,tot:s.ptot}].concat(s.split?[{cards:s.split,bet:s.bet2,tot:s.stot}]:[]);
+  if(!skipDeal){fillHand($('dh'),s.dealer);$('dt').textContent=s.dtot!=null?s.dtot:'';}
+  fillHand($('ph'),(HS[0]&&HS[0].cards)||s.player);
+  $('pt').textContent=HS[0]?totC(HS[0].cards):(s.ptot!=null?s.ptot:'');
   if($('col2')){
-    $('col2').style.display=s.split?'block':'none';
-    if($('col1')) $('col1').className='col'+(s.split&&s.which===0?' on':'');
-    $('col2').className='col'+(s.split&&s.which===1?' on':'');
-    if($('lab1')) $('lab1').textContent=s.split?('MAIN 1 · €'+(s.bet||0)):'MAIN 1';
-    if($('lab2')) $('lab2').textContent='MAIN 2 · €'+(s.bet2||s.bet||0);
-    if(s.split){fillHand($('sh'),s.split);if($('st'))$('st').textContent=s.stot!=null?s.stot:'';}
+    const two=HS.length>1;
+    $('col2').style.display=two?'block':'none';
+    if($('col1')) $('col1').className='col'+(two&&s.which===0?' on':'');
+    $('col2').className='col'+(two&&s.which===1?' on':'');
+    if($('lab1')) $('lab1').textContent=two?('MAIN 1 · €'+((HS[0]&&HS[0].bet)||0)):'VOUS';
+    if($('lab2')&&HS[1]) $('lab2').textContent='MAIN 2 · €'+(HS[1].bet||0);
+    if(two){fillHand($('sh'),HS[1].cards);if($('st'))$('st').textContent=totC(HS[1].cards);}
   }
-  if(s.split&&s.phase==='play') $('msg').textContent='Tu joues la MAIN '+(s.which===1?'2':'1');
+  if(HS.length>1&&s.phase==='play') $('msg').textContent='Tu joues la MAIN '+(Number(s.which)+1);
   const chips=$('chips'),acts=$('acts');chips.innerHTML='';acts.innerHTML='';
   const stake=(s.bet||0)+(s.split?(s.bet2||0):0);const aff=s.gain!=null?s.gain:(s.result==='perdu'?-stake:stake);
   if(s.phase==='end'&&(s.result==='gagne'||s.result==='blackjack'||(s.result||'').includes('gagne'))){sndWin();banner(s.result==='blackjack'?'BLACKJACK':'YOU WIN',(aff>=0?'+':'')+'€'+Math.abs(aff));}
@@ -246,7 +250,9 @@ function ui(s,skipDeal){
       if(ns.phase==='end'){await new Promise(r=>setTimeout(r,450));await revealDealer(ns);ui(ns,true);}
       else if(a!=='hit') ui(ns);
     }catch(e){alert(e.message);}window._act=0;};acts.appendChild(b);});
-  if(s.canSplit){const b=document.createElement('button');b.textContent='Séparer';b.onclick=async()=>{try{ui(await api('/api/action',{action:'split'}));}catch(e){alert(e.message);}};acts.appendChild(b);}}}
+  const cur=HS[s.which]||HS[0];
+  const canSp=s.phase==='play'&&cur&&cur.cards&&cur.cards.length===2&&cur.cards[0].v&&(cur.cards[0].v===cur.cards[1].v||['10','J','Q','K'].includes(cur.cards[0].v)&&['10','J','Q','K'].includes(cur.cards[1].v));
+  if(canSp||s.canSplit){const b=document.createElement('button');b.textContent='Séparer';b.onclick=async()=>{try{const ns=await api('/api/action',{action:'split'});ui(ns,false);}catch(e){alert(e.message);}};acts.appendChild(b);}}}
 function render(s){ui(s);}
 
 
