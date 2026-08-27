@@ -137,7 +137,7 @@ radial-gradient(ellipse at 50% 12%,#3a9a68 0%,#1a6b44 42%,#0c3a28 100%);}
   <div class="arc">LE BLACKJACK PAIE 3 POUR 2<br><small>LA BANQUE TIRE A 16 · RESTE A 17</small></div>
   <div class="oval"><div class="chipon" id="chipon"></div></div>
   <div id="msg"></div>
-  <div class="hands-row"><div class="col" id="col1"><div class="hlab" id="lab1">VOUS</div><div class="hand" id="ph"></div><div class="tot" id="pt"></div></div><div class="col" id="col2" style="display:none"><div class="hlab" id="lab2">MAIN 2</div><div class="hand" id="sh"></div><div class="tot" id="st"></div></div></div>
+  <div class="hands-row" id="handsRow"><div class="col" id="col1"><div class="hlab" id="lab1">VOUS</div><div class="hand" id="ph"></div><div class="tot" id="pt"></div></div><div class="col" id="col2" style="display:none"><div class="hlab" id="lab2">MAIN 2</div><div class="hand" id="sh"></div><div class="tot" id="st"></div></div></div>
   <div class="vous">VOUS</div>
   <div class="seat" id="seat">S ASSEOIR</div>
 </div>
@@ -185,7 +185,7 @@ async function dealSeq(s){
   const D=s.dealer||[],P=s.player||[];
   const seq=[{w:'ph',c:P[0]},{w:'dh',c:D[0]},{w:'ph',c:P[1]},{w:'dh',c:D[1]}].filter(x=>x.c);
   const seenD=[],seenP=[];
-  for(const step of seq){await new Promise(r=>setTimeout(r,220));sndCard();$(step.w).appendChild(C(step.c));
+  for(const step of seq){await new Promise(r=>setTimeout(r,360));sndCard();$(step.w).appendChild(C(step.c));
     if(step.w==='ph'){seenP.push(step.c);$('pt').textContent=totC(seenP);}
     else{seenD.push(step.c);$('dt').textContent=totC(seenD.filter(c=>c&&c.v!=='?'));}
   }
@@ -201,11 +201,11 @@ async function revealDealer(s){
     if(kids[1]){kids[1].replaceWith(C(D[1]));sndCard();}
     else {box.appendChild(C(D[1]));sndCard();}
     shown.push(D[1]);$('dt').textContent=totC(shown);
-    await new Promise(r=>setTimeout(r,280));
+    await new Promise(r=>setTimeout(r,360));
   }
   for(let i=2;i<D.length;i++){
     if(box.children[i]) continue;
-    await new Promise(r=>setTimeout(r,280));
+    await new Promise(r=>setTimeout(r,360));
     sndCard();box.appendChild(C(D[i]));shown.push(D[i]);$('dt').textContent=totC(shown);
   }
   $('dt').textContent=s.dtot!=null?s.dtot:totC(D);
@@ -217,18 +217,19 @@ function ui(s,skipDeal){
   const seat=$('seat');seat.className='seat'+(seated?' on':'');seat.textContent=seated?(moi.pseudo||'TOI'):"S'ASSEOIR";
   const HS=s.hands&&s.hands.length?s.hands:[{cards:s.player,bet:s.bet,tot:s.ptot}].concat(s.split?[{cards:s.split,bet:s.bet2,tot:s.stot}]:[]);
   if(!skipDeal){fillHand($('dh'),s.dealer);$('dt').textContent=s.dtot!=null?s.dtot:'';}
-  fillHand($('ph'),(HS[0]&&HS[0].cards)||s.player);
-  $('pt').textContent=HS[0]?totC(HS[0].cards):(s.ptot!=null?s.ptot:'');
-  if($('col2')){
-    const two=HS.length>1;
-    $('col2').style.display=two?'block':'none';
-    if($('col1')) $('col1').className='col'+(two&&s.which===0?' on':'');
-    $('col2').className='col'+(two&&s.which===1?' on':'');
-    if($('lab1')) $('lab1').textContent=two?('MAIN 1 · €'+((HS[0]&&HS[0].bet)||0)):'VOUS';
-    if($('lab2')&&HS[1]) $('lab2').textContent='MAIN 2 · €'+(HS[1].bet||0);
-    if(two){fillHand($('sh'),HS[1].cards);if($('st'))$('st').textContent=totC(HS[1].cards);}
+  const row=$('handsRow');
+  if(row){
+    row.innerHTML='';
+    HS.slice(0,4).forEach((h,i)=>{
+      const col=document.createElement('div');
+      col.className='col'+(s.which===i&&s.phase==='play'?' on':'');
+      const lab=document.createElement('div');lab.className='hlab';lab.textContent=HS.length>1?('MAIN '+(i+1)+' · €'+(h.bet||0)):'VOUS';
+      const hd=document.createElement('div');hd.className='hand';fillHand(hd,h.cards||[]);
+      const tt=document.createElement('div');tt.className='tot';tt.textContent=totC(h.cards||[]);
+      col.appendChild(lab);col.appendChild(hd);col.appendChild(tt);row.appendChild(col);
+    });
   }
-  if(HS.length>1&&s.phase==='play') $('msg').textContent='Tu joues la MAIN '+(Number(s.which)+1);
+  if(HS.length>1&&s.phase==='play') $('msg').textContent='Tu joues la MAIN '+(Number(s.which)+1)+' / '+HS.length;
   const chips=$('chips'),acts=$('acts');chips.innerHTML='';acts.innerHTML='';
   const stake=(s.bet||0)+(s.split?(s.bet2||0):0);const aff=s.gain!=null?s.gain:(s.result==='perdu'?-stake:stake);
   if(s.phase==='end'&&(s.result==='gagne'||s.result==='blackjack'||(s.result||'').includes('gagne'))){sndWin();banner(s.result==='blackjack'?'BLACKJACK':'YOU WIN',(aff>=0?'+':'')+'€'+Math.abs(aff));}
@@ -242,13 +243,9 @@ function ui(s,skipDeal){
     acts.appendChild(clr);
     acts.appendChild(go);
   }
-  if(s.phase==='play'){window._hand=s.which||0;const actsList=[['Tirer','hit']];if(s.canDouble)actsList.push(['Doubler','double']);actsList.push(['Rester','stand']);actsList.forEach(([l,a],i)=>{const b=document.createElement('button');if(a==='stand')b.className='p';if(a==='double'){b.className='p';b.style.background='#1e5a9c';b.style.color='#fff';}b.textContent=l;b.onclick=async()=>{if(window._act)return;window._act=1;try{const ns=await api('/api/action',{action:a});
-      const hand=ns.which===1&&ns.split?ns.split:ns.player;const last=hand&&hand[hand.length-1];
-      if((a==='hit'||a==='double')&&last){sndCard();const left=window._hand!==1;const box=left?$('ph'):$('sh');if(box.firstChild)box.insertBefore(C(last),box.firstChild);else box.appendChild(C(last));if(left)$('pt').textContent=ns.ptot!=null?ns.ptot:'';else if($('st'))$('st').textContent=ns.stot!=null?ns.stot:'';}
-      if(a==='double'){const mid=$('chipon');const amt=ns.which===1?(ns.bet2||ns.bet):ns.bet;mid.innerHTML=svgChip(amt||lastBet,(amt||lastBet)>=50?'#c42838':(amt||lastBet)>=25?'#1a8a3a':'#1e4ec4');}
-      moi.solde=ns.solde;$('solde').textContent='€'+ns.solde;
-      if(ns.phase==='end'){await new Promise(r=>setTimeout(r,450));await revealDealer(ns);ui(ns,true);}
-      else if(a!=='hit') ui(ns);
+  if(s.phase==='play'){window._hand=s.which||0;const actsList=[['Tirer','hit']];if(s.canDouble)actsList.push(['Doubler','double']);actsList.push(['Rester','stand']);actsList.forEach(([l,a],i)=>{const b=document.createElement('button');if(a==='stand')b.className='p';if(a==='double'){b.className='p';b.style.background='#1e5a9c';b.style.color='#fff';}b.textContent=l;b.onclick=async()=>{if(window._act)return;window._act=1;try{const ns=await api('/api/action',{action:a});sndCard();
+      if(ns.phase==='end'){await revealDealer(ns);ui(ns,true);}
+      else ui(ns,true);
     }catch(e){alert(e.message);}window._act=0;};acts.appendChild(b);});
   const cur=HS[s.which]||HS[0];
   const canSp=s.phase==='play'&&cur&&cur.cards&&cur.cards.length===2&&cur.cards[0].v&&(cur.cards[0].v===cur.cards[1].v||['10','J','Q','K'].includes(cur.cards[0].v)&&['10','J','Q','K'].includes(cur.cards[1].v));
