@@ -876,9 +876,24 @@ input{font-family:inherit}
 .btn-sm{background:rgba(201,162,39,.15);border:1px solid rgba(201,162,39,.4);color:var(--or2);border-radius:8px;padding:.55rem .9rem;font-size:.8rem;font-weight:600;white-space:nowrap}
 
 /* TABLE */
-#table-page{background:#0a1f18;height:100dvh;max-height:100dvh;overflow:hidden}
-#table-page .topbar{flex-shrink:0;padding:.35rem .6rem}
-.felt{flex:1;background:radial-gradient(ellipse 90% 70% at 50% 45%,#1a6b4a 0%,#0f4a34 40%,#0a3224 70%,#061c14 100%);padding:.45rem .4rem .35rem;display:flex;flex-direction:column;align-items:center;justify-content:space-between;min-height:0;overflow:hidden;box-shadow:inset 0 0 80px rgba(0,0,0,.35)}
+#table-page{background:#3a2416;height:100dvh;max-height:100dvh;overflow:hidden;padding:6px}
+.felt{flex:1;background:
+radial-gradient(ellipse 80% 60% at 50% 40%,#1a5c40 0%,#0e3a2a 55%,#0a2a1e 100%);
+padding:.5rem .4rem .3rem;display:flex;flex-direction:column;align-items:center;min-height:0;overflow:hidden;border-radius:8px 8px 0 0;box-shadow:inset 0 0 80px rgba(0,0,0,.35)}
+.felt-top{width:100%;display:flex;justify-content:space-between;align-items:flex-start;padding:0 .2rem}
+.mini-box{text-align:center;opacity:.7}
+.mini-bar{width:36px;height:10px;background:#4a2a1a;border-radius:2px;margin:0 auto .15rem}
+.mini-bar.sab{background:#6b5a2a}
+.mini-box span{font-size:.48rem;letter-spacing:.12em}
+.arc{text-align:center;color:#c9b87a;opacity:.55;font-size:.62rem;letter-spacing:.08em;margin:.35rem 0;line-height:1.35}
+.oval{width:118px;height:52px;border:2px solid rgba(201,176,90,.45);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:.2rem auto}
+.oval.ready{box-shadow:0 0 12px rgba(240,193,74,.35)}
+#ovalChip{font-size:.7rem;font-weight:800;color:#f5e6b8}
+.vous-lab{font-size:.58rem;letter-spacing:.2em;opacity:.5;margin-top:.15rem}
+.rail{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#5a3a22,#2a1810);padding:.35rem .7rem calc(.35rem + env(safe-area-inset-bottom));border-top:2px solid #c9a22755;flex-shrink:0}
+.rail-cell{text-align:center}
+.rail .rk{font-size:.55rem;letter-spacing:.16em;opacity:.65}
+.rail .rv{font-size:1.05rem;font-weight:700;color:#f0e0a8}
 .dealer-zone{text-align:center;width:100%}
 .lib{font-size:.58rem;letter-spacing:.2em;opacity:.5;text-transform:uppercase;margin-bottom:.35rem;color:#c8e6d5}
 .cartes{display:flex;gap:.25rem;justify-content:center;flex-wrap:wrap;min-height:52px}
@@ -1033,23 +1048,25 @@ input{font-family:inherit}
 </div>
 
 <div id="table-page" class="page">
-  <div class="topbar">
-    <button class="icon-btn" id="btnBackLobby">←</button>
-    <div class="brand" id="tableTitle">TABLE</div>
-    <div class="info">
-      <span class="solde" id="tableSolde">0</span>
-    </div>
-  </div>
   <div class="felt">
-    <div class="dealer-zone">
-      <div class="lib">Croupier</div>
-      <div class="cartes" id="dealerCards"></div>
-      <div class="tot" id="dealerTot"></div>
+    <div class="felt-top">
+      <div class="mini-box"><div class="mini-bar"></div><span>TALON</span></div>
+      <div class="lib">CROUPIER</div>
+      <div class="mini-box"><div class="mini-bar sab"></div><span>SABOT</span></div>
     </div>
-    <div class="msg-center" id="tableMsg">Prenez place</div>
+    <div class="cartes" id="dealerCards"></div>
+    <div class="tot" id="dealerTot"></div>
+    <div class="arc">LE BLACKJACK PAIE 3 POUR 2<br><small>LA BANQUE TIRE À 16 · RESTE À 17</small></div>
+    <div class="oval" id="betSpot"><span id="ovalChip"></span></div>
+    <div class="msg-center" id="tableMsg">Les jeux sont faits</div>
     <div class="my-hand" id="myHand"></div>
-    <div class="bet-spot" id="betSpot">MISE</div>
-    <div class="seats-row" id="seatsRow"></div>
+    <div class="vous-lab">VOUS</div>
+    <div class="seats-row" id="seatsRow" style="display:none"></div>
+  </div>
+  <div class="rail">
+    <div class="rail-cell"><div class="rk">SOLDE</div><div class="rv" id="tableSolde">0</div></div>
+    <div class="rail-cell"><div class="rk">MISE</div><div class="rv" id="miseRail">0</div></div>
+    <button class="icon-btn" id="btnBackLobby">⚙</button>
   </div>
   <div class="controls">
     <div class="mise-display" id="miseDisp"></div>
@@ -1223,9 +1240,10 @@ async function goLobby(){
 async function joinTable(id){
   tableId=id; chipSel=0;
   if(poll) clearInterval(poll);
+  try{await api('POST','/api/table/'+id+'/asseoir',{siege:0});}catch(e){}
   await refreshTable();
   show('table-page');
-  poll=setInterval(refreshTable,1200);
+  poll=setInterval(refreshTable,900);
 }
 async function refreshTable(){
   if(!tableId) return;
@@ -1291,10 +1309,12 @@ function renderTable(t){
     if(win) playWinSound();
     setTimeout(()=>{const b=document.getElementById('winBanner'); if(b) b.remove();},1100);
   }
+  if($('miseRail')) $('miseRail').textContent=my&&my.mise?my.mise:'0';
   const spot=$('betSpot');
   if(spot){
-    spot.className='bet-spot'+(chipSel && my && (t.phase==='mises'||t.phase==='attente'||t.phase==='fin')?' ready':'');
-    spot.textContent=my && my.mise?('€'+my.mise):(chipSel?('€'+chipSel):'MISE');
+    spot.className='oval'+(chipSel && my && (t.phase==='mises'||t.phase==='attente'||t.phase==='fin')?' ready':'');
+    const oc=$('ovalChip');
+    if(oc) oc.textContent=my && my.mise?my.mise:(chipSel?chipSel:'');
     spot.onclick=async()=>{
       if(!my || !chipSel) return;
       if(!(t.phase==='mises'||t.phase==='attente'||t.phase==='fin')) return;
