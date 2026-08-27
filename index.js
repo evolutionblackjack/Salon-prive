@@ -31,8 +31,10 @@ async function api(req,res,path){
     else if(a==='split'){if(!g.hands||!g.hands.length)g.hands=[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2||g.bet}]:[]);const h=g.hands[g.which];if(!pair(h.cards)||g.hands.length>=4)return json(res,400,{err:'Pas de paire'});if(u.solde<h.bet)return json(res,400,{err:'Solde'});u.solde-=h.bet;const ace=h.cards[0].v==='A';const c2=h.cards.pop();const nh={cards:[c2],bet:h.bet};h.cards.push(draw(false,tot(h.cards)));nh.cards.push(draw(false,tot(nh.cards)));g.hands.splice(g.which+1,0,nh);g.player=g.hands[0].cards;g.bet=g.hands[0].bet;g.split=g.hands[1]?g.hands[1].cards:null;g.bet2=g.hands[1]?g.hands[1].bet:0;if(ace){g.msg='As separes';g.which=Math.min(g.which+1,g.hands.length-1);if(g.which>=g.hands.length-1)finish(u);}else{g.msg='Main '+(g.which+1);}}
     else return json(res,400,{err:'Action'});return json(res,200,pub(u));}
   if(path==='/api/quitter'&&req.method==='POST'){
-    if(g.phase==='play'&&g.bet){u.solde+=g.bet;if(g.bet2)u.solde+=g.bet2;}
-    g.player=[];g.dealer=[];g.split=null;g.bet=0;g.bet2=0;g.phase='bet';g.msg='Mise';g.result='';g.uid=null;
+    if(g.uid===u.id||!g.uid){
+      if(g.phase==='play'){if(g.hands&&g.hands.length)g.hands.forEach(h=>u.solde+=(h.bet||0));else{u.solde+=g.bet||0;if(g.bet2)u.solde+=g.bet2;}}
+      g.player=[];g.dealer=[];g.split=null;g.hands=[];g.bet=0;g.bet2=0;g.which=0;g.phase='bet';g.msg='Mise';g.result='';g.uid=null;g.gain=0;
+    }
     return json(res,200,pub(u));
   }
   if(path==='/api/admin'&&u.role==='admin'){if(req.method==='GET')return json(res,200,{mode,modes:MODE,comptes:[...comptes.values()].map(c=>({id:c.id,pseudo:c.pseudo,code:c.code,role:c.role,solde:c.solde}))});if(b.mode&&MODE[b.mode])mode=b.mode;if(b.nouveau&&b.nouveau.pseudo&&b.nouveau.code)add(b.nouveau.pseudo,b.nouveau.code,'joueur',+b.nouveau.solde||2000);if(b.jetons&&b.jetons.id){const c=comptes.get(b.jetons.id);if(c)c.solde=Math.max(0,c.solde+(+b.jetons.delta||0));}return json(res,200,{ok:true,mode});}
@@ -189,7 +191,7 @@ async function dealSeq(s){
   const D=s.dealer||[],P=s.player||[];
   const seq=[{w:'ph',c:P[0]},{w:'ph',c:P[1]},{w:'dh',c:D[0]},{w:'dh',c:D[1]}].filter(x=>x.c);
   const seenD=[],seenP=[];
-  for(const step of seq){await new Promise(r=>setTimeout(r,240));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
+  for(const step of seq){await new Promise(r=>setTimeout(r,280));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
     if(step.w==='ph'){seenP.push(step.c);if($('pt'))$('pt').textContent=totC(seenP);}
     else{seenD.push(step.c);$('dt').textContent=totC(seenD.filter(c=>c&&c.v!=='?'));}
   }
@@ -248,7 +250,7 @@ function ui(s,skipDeal){
     acts.appendChild(go);
   }
   if(s.phase==='play'){window._hand=s.which||0;const actsList=[['Tirer','hit']];if(s.canDouble)actsList.push(['Doubler','double']);actsList.push(['Rester','stand']);actsList.forEach(([l,a],i)=>{const b=document.createElement('button');if(a==='stand')b.className='p';if(a==='double'){b.className='p';b.style.background='#1e5a9c';b.style.color='#fff';}b.textContent=l;b.onclick=async()=>{if(window._act)return;window._act=1;try{const ns=await api('/api/action',{action:a});sndCard();
-      if(ns.phase==='end'){await revealDealer(ns);ui(ns,true);}
+      if(ns.phase==='end'){ui(ns,true);await new Promise(r=>setTimeout(r,320));await revealDealer(ns);ui(ns,true);}
       else ui(ns,true);
     }catch(e){alert(e.message);}window._act=0;};acts.appendChild(b);});
   const cur=HS[s.which]||HS[0];
@@ -281,7 +283,7 @@ async function refreshLive(){
   }catch(e){}
 }
 $('go').onclick=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));if(moi.role==='admin') startHud();}catch(e){$('er').textContent=e.message;}};
-$('leave').onclick=async()=>{try{await api('/api/quitter',{});}catch(e){}seated=false;lastBet=0;if(autoT)clearTimeout(autoT);$('dh').innerHTML='';$('ph').innerHTML='';$('dt').textContent='';$('pt').textContent='';$('acts').innerHTML='';$('chips').innerHTML='';api('/api/etat').then(render);};
+$('leave').onclick=async()=>{try{await api('/api/quitter',{});}catch(e){}seated=false;lastBet=0;if(autoT)clearTimeout(autoT);$('dh').innerHTML='';if($('handsRow'))$('handsRow').innerHTML='';$('dt').textContent='';$('msg').textContent='';if($('chipon'))$('chipon').innerHTML='';$('acts').innerHTML='';$('chips').innerHTML='';api('/api/etat').then(render);};
 $('seat').onclick=()=>{seated=true;api('/api/etat').then(render);};
 $('out2')&&($('out2').onclick=()=>$('out').click());
 $('out').onclick=()=>{if(autoT)clearTimeout(autoT);if(liveT)clearInterval(liveT);const h=$('hud');if(h)h.classList.remove('on');lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
