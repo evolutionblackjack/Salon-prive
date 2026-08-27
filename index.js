@@ -372,6 +372,24 @@ function finirCroupierEtRegler(table) {
       s.resultat2 = tmp.resultat;
     }
   }
+  setTimeout(() => {
+    if (table.phase !== 'fin') return;
+    for (const s of table.sieges) {
+      if (!s.joueurId) continue;
+      s.main = [];
+      s.main2 = null;
+      s.mise = 0;
+      s.mise2 = 0;
+      s.jeuMain = 1;
+      s.resultat = null;
+      s.message = '';
+      s.statut = 'assis';
+    }
+    table.croupier = [];
+    table.phase = 'mises';
+    table.message = 'Nouvelles mises';
+    table.tourSiege = -1;
+  }, 900);
 }
 
 function nextPlayerOrDealer(table) {
@@ -1077,7 +1095,7 @@ async function joinTable(id){
   if(poll) clearInterval(poll);
   await refreshTable();
   show('table-page');
-  poll=setInterval(refreshTable,800);
+  poll=setInterval(refreshTable,1200);
 }
 async function refreshTable(){
   if(!tableId) return;
@@ -1087,14 +1105,18 @@ async function refreshTable(){
   }catch(e){console.warn(e);}
 }
 let lastCardSig='';
+let lastRenderKey='';
 function renderTable(t){
+  const my=t.sieges.find(s=>s.estMoi);
+  const key=JSON.stringify({p:t.phase,m:t.message,ts:t.tourSiege,c:t.croupier,s:t.sieges,solde:moi&&moi.solde,chip:chipSel});
+  if(key===lastRenderKey) return;
+  lastRenderKey=key;
   $('tableTitle').textContent=t.nom.toUpperCase();
   $('tableSolde').textContent='€'+moi.solde.toLocaleString('fr-FR');
   $('tableMsg').textContent=t.message||'';
   $('dealerCards').innerHTML='';
   (t.croupier||[]).forEach(c=>$('dealerCards').appendChild(carteEl(c)));
   $('dealerTot').textContent=t.totCroupier!=null?t.totCroupier:'';
-  const my=t.sieges.find(s=>s.estMoi);
   const mh=$('myHand'); mh.innerHTML='';
   if(my && my.main && my.main.length){
     const wrap=document.createElement('div'); wrap.className='cartes';
