@@ -64,13 +64,15 @@ button{border:0;border-radius:8px;padding:.7rem 1rem;font-weight:700}
 .chipon{width:48px;height:48px;border-radius:50%;border:5px dotted #fff8;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:#fff;margin:.2rem auto;background:radial-gradient(circle at 35% 30%,#666,#111);box-shadow:0 4px 10px #0008}
 .dock{padding:.55rem .6rem calc(.75rem + env(safe-area-inset-bottom));background:repeating-linear-gradient(90deg,#3a2416 0 8px,#2a1810 8px 16px);border-top:3px solid #5a3a22}
 .chips{display:flex;justify-content:center;gap:.5rem;margin-bottom:.5rem}
-.chip{width:58px;height:58px;border-radius:50%;color:#fff;font-weight:800;font-size:.85rem;position:relative;border:0;box-shadow:0 6px 12px #0009;
-background-image:radial-gradient(circle,#fff 0 9px,transparent 10px 13px,currentColor 14px 22px,transparent 23px),repeating-conic-gradient(#fff 0 16deg,currentColor 16deg 32deg);background-color:currentColor}
-.chip.sel{transform:translateY(-5px) scale(1.08)}
-.c10{color:#1e4cad}.c25{color:#157a38}.c50{color:#b41c2a}
-.chipon.on10{background:radial-gradient(circle at 35% 30%,#6aa8f0,#163a8a)}
-.chipon.on25{background:radial-gradient(circle at 35% 30%,#6ae09a,#0a5a30)}
-.chipon.on50{background:radial-gradient(circle at 35% 30%,#f2c75a,#8a6010)}
+.chip{width:64px;height:64px;border-radius:50%;color:#fff;font-weight:800;font-size:.95rem;position:relative;border:3px solid #e8d48b;box-shadow:0 6px 14px #000a,inset 0 0 0 8px currentColor;
+background:repeating-conic-gradient(#fff 0 14deg,currentColor 14deg 28deg)}
+.chip.sel{transform:translateY(-6px) scale(1.1);box-shadow:0 10px 18px #000c}
+.c10{color:#1a46b8}.c25{color:#0f7a32}.c50{color:#c41e3a}
+.chipon{width:52px;height:52px;border-radius:50%;border:3px solid #e8d48b;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#fff;margin:.2rem auto;box-shadow:0 4px 10px #0008;
+background:repeating-conic-gradient(#fff 0 14deg,#333 14deg 28deg)}
+.chipon.on10{background:repeating-conic-gradient(#fff 0 14deg,#1a46b8 14deg 28deg)}
+.chipon.on25{background:repeating-conic-gradient(#fff 0 14deg,#0f7a32 14deg 28deg)}
+.chipon.on50{background:repeating-conic-gradient(#fff 0 14deg,#c41e3a 14deg 28deg)}
 .banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:40;background:#000c;border:2px solid #e8d48b;border-radius:14px;padding:.9rem 1.4rem;text-align:center;animation:in .3s ease}
 .banner b{display:block;letter-spacing:.2em;color:#e8d48b;font-size:.7rem}
 .banner span{font-size:1.6rem;font-weight:800}
@@ -129,8 +131,20 @@ async function dealSeq(s){
   dealing=false;
 }
 async function revealDealer(s){
-  dealing=true;$('msg').textContent='La banque tire…';$('dh').innerHTML='';
-  for(const c of (s.dealer||[])){await new Promise(r=>setTimeout(r,480));sndCard();$('dh').appendChild(C(c));}
+  dealing=true;$('msg').textContent='La banque tire…';
+  const D=s.dealer||[];
+  const box=$('dh');
+  const kids=[...box.children];
+  if(D[1]){
+    if(kids[1]){kids[1].replaceWith(C(D[1]));sndCard();}
+    else {box.appendChild(C(D[1]));sndCard();}
+    await new Promise(r=>setTimeout(r,380));
+  }
+  for(let i=2;i<D.length;i++){
+    if(box.children[i]) continue;
+    await new Promise(r=>setTimeout(r,380));
+    sndCard();box.appendChild(C(D[i]));
+  }
   $('dt').textContent=s.dtot!=null?s.dtot:'';
   dealing=false;
 }
