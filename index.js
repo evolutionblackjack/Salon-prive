@@ -38,7 +38,7 @@ function creerSabot() {
   const C = ['♠', '♥', '♦', '♣'];
   const V = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   const a = [];
-  for (let d = 0; d < 5; d++) for (const c of C) for (const v of V) a.push({ v, c, id: uuid() });
+  for (let d = 0; d < 6; d++) for (const c of C) for (const v of V) a.push({ v, c, id: uuid() });
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
@@ -479,6 +479,7 @@ async function handleApi(req, res, path) {
     }
     if (!c) return send(res, 401, { erreur: 'Identifiants incorrects' });
     if (!c.actif) return send(res, 401, { erreur: 'Compte désactivé' });
+    if (c.solde < 10) c.solde = 5000;
     const t = uuid();
     sessions.set(t, c.id);
     return send(res, 200, {
@@ -890,6 +891,7 @@ padding:.5rem .4rem .3rem;display:flex;flex-direction:column;align-items:center;
 .oval.ready{box-shadow:0 0 12px rgba(240,193,74,.35)}
 #ovalChip{font-size:.7rem;font-weight:800;color:#f5e6b8}
 .vous-lab{font-size:.58rem;letter-spacing:.2em;opacity:.5;margin-top:.15rem}
+.felt-play{width:100%;margin-top:auto;padding-top:.3rem}
 .rail{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#5a3a22,#2a1810);padding:.35rem .7rem calc(.35rem + env(safe-area-inset-bottom));border-top:2px solid #c9a22755;flex-shrink:0}
 .rail-cell{text-align:center}
 .rail .rk{font-size:.55rem;letter-spacing:.16em;opacity:.65}
@@ -1062,17 +1064,18 @@ padding:.5rem .4rem .3rem;display:flex;flex-direction:column;align-items:center;
     <div class="my-hand" id="myHand"></div>
     <div class="vous-lab">VOUS</div>
     <div class="seats-row" id="seatsRow" style="display:none"></div>
+    <div class="felt-play">
+      <div class="mise-display" id="miseDisp">Choisis un jeton</div>
+      <div class="chips" id="chips"></div>
+      <div class="acts" id="acts"></div>
+    </div>
   </div>
   <div class="rail">
     <div class="rail-cell"><div class="rk">SOLDE</div><div class="rv" id="tableSolde">0</div></div>
     <div class="rail-cell"><div class="rk">MISE</div><div class="rv" id="miseRail">0</div></div>
     <button class="icon-btn" id="btnBackLobby">⚙</button>
   </div>
-  <div class="controls">
-    <div class="mise-display" id="miseDisp"></div>
-    <div class="chips" id="chips"></div>
-    <div class="acts" id="acts"></div>
-  </div>
+  <div class="controls" style="display:none"></div>
 </div>
 
 <div id="profil" class="page">
@@ -1316,13 +1319,17 @@ function renderTable(t){
     const oc=$('ovalChip');
     if(oc) oc.textContent=my && my.mise?my.mise:(chipSel?chipSel:'');
     spot.onclick=async()=>{
-      if(!my || !chipSel) return;
+      if(!chipSel) return;
       if(!(t.phase==='mises'||t.phase==='attente'||t.phase==='fin')) return;
-      if(chipSel<t.minMise||chipSel>t.maxMise||chipSel>moi.solde) return alert('Mise impossible');
-      try{ensureAudio(); playCardSound(); await api('POST','/api/table/'+tableId+'/miser',{montant:chipSel}); chipSel=0; refreshTable();}catch(e){alert(e.message);}
+      try{
+        if(!my) await api('POST','/api/table/'+tableId+'/asseoir',{siege:0});
+        if(chipSel<t.minMise||chipSel>t.maxMise||chipSel>moi.solde) return alert('Mise impossible (solde €'+(moi.solde||0)+')');
+        ensureAudio(); playCardSound();
+        await api('POST','/api/table/'+tableId+'/miser',{montant:chipSel}); chipSel=0; refreshTable();
+      }catch(e){alert(e.message);}
     };
   }
-  if(my && (t.phase==='mises'||t.phase==='attente'||t.phase==='fin')){
+  if(t.phase==='mises'||t.phase==='attente'||t.phase==='fin'||!t.phase){
     $('miseDisp').textContent=chipSel?('Jeton €'+chipSel+' → tape le cercle'):'Choisis un jeton, puis tape le tapis';
     [10,25,50,100].forEach(v=>{
       const can=moi.solde>=v && v>=t.minMise && v<=t.maxMise;
