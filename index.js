@@ -73,12 +73,12 @@ transition:background .4s}
 .chipon{width:48px;height:48px;border-radius:50%;border:5px dotted #fff8;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:#fff;margin:.2rem auto;background:radial-gradient(circle at 35% 30%,#666,#111);box-shadow:0 4px 10px #0008}
 .dock{padding:.55rem .6rem calc(.75rem + env(safe-area-inset-bottom));background:repeating-linear-gradient(90deg,#3a2416 0 8px,#2a1810 8px 16px);border-top:3px solid #5a3a22}
 .chips{display:flex;justify-content:center;gap:.5rem;margin-bottom:.5rem}
-.chip{width:68px;height:68px;border-radius:50%;color:#1a46b8;font-weight:900;font-size:1.15rem;position:relative;border:3px solid #e8d48b;box-shadow:0 6px 14px #000a;background:repeating-conic-gradient(#fff 0 14deg,currentColor 14deg 28deg);display:flex;align-items:center;justify-content:center}
-.chip span{position:relative;z-index:2;width:34px;height:34px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;border:2px solid #e8d48b;font-size:1rem}
+.chip{width:74px;height:74px;border-radius:50%;font-weight:800;position:relative;border:3px solid #e8c76a;box-shadow:0 8px 16px #000a,inset 0 0 0 9px currentColor;background:repeating-conic-gradient(#fff 0 11deg,currentColor 11deg 22deg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.chip::before{content:"♛";position:relative;z-index:2;font-size:.78rem;color:#f3e2a6;line-height:1;margin-bottom:1px}
+.chip span{position:relative;z-index:2;font-size:1.2rem;color:#fff;text-shadow:0 1px 2px #0009;line-height:1}
 .chip.sel{transform:translateY(-6px) scale(1.1);box-shadow:0 10px 18px #000c}
-.c10{color:#1a46b8}.c25{color:#0f7a32}.c50{color:#c41e3a}
-.chipon{width:54px;height:54px;border-radius:50%;border:3px solid #e8d48b;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;color:#111;margin:.2rem auto;box-shadow:0 4px 10px #0008;
-background:radial-gradient(circle,#fff 0 16px,transparent 17px),repeating-conic-gradient(#fff 0 14deg,#333 14deg 28deg)}
+.c10{color:#1e4ec4}.c25{color:#1a8a3a}.c50{color:#c42838}
+.chipon{width:56px;height:56px;border-radius:50%;border:3px solid #e8c76a;display:flex;align-items:center;justify-content:center;font-size:1.05rem;font-weight:800;color:#fff;margin:.2rem auto;box-shadow:0 5px 12px #0008,inset 0 0 0 7px #1e4ec4;background:repeating-conic-gradient(#fff 0 11deg,#1e4ec4 11deg 22deg)}
 .chipon.on10{background:repeating-conic-gradient(#fff 0 14deg,#1a46b8 14deg 28deg)}
 .chipon.on25{background:repeating-conic-gradient(#fff 0 14deg,#0f7a32 14deg 28deg)}
 .chipon.on50{background:repeating-conic-gradient(#fff 0 14deg,#c41e3a 14deg 28deg)}
