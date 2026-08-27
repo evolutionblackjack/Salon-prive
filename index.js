@@ -65,14 +65,14 @@ radial-gradient(ellipse at 50% 12%,#3a9a68 0%,#1a6b44 42%,#0c3a28 100%);}
 .hlab{font-size:.58rem;letter-spacing:.12em;text-align:center;opacity:.7;margin-bottom:.2rem}
 .lab{font-size:.65rem;letter-spacing:.18em;opacity:.7;color:#f0d9a0}
 .hand{display:flex;gap:0;min-height:88px}
-.card{width:66px;height:96px;margin-right:-16px;border-radius:9px;background:linear-gradient(#fffef8,#f3ead6);color:#1a1208;position:relative;box-shadow:0 10px 18px #0006,0 0 0 1px #d9c9a4;animation:deal .38s cubic-bezier(.16,.84,.28,1);flex-shrink:0}
+.card{width:66px;height:96px;margin-right:-16px;border-radius:9px;background:linear-gradient(#fffef8,#f3ead6);color:#1a1208;position:relative;box-shadow:0 10px 18px #0006,0 0 0 1px #d9c9a4;animation:deal .18s ease-out;flex-shrink:0}
 .card .c1,.card .c2{position:absolute;width:18px;text-align:center;font-family:Georgia,'Times New Roman',serif;font-weight:800;line-height:1.05;font-size:.78rem}
 .card .c1{top:5px;left:4px}.card .c2{bottom:5px;right:4px;transform:rotate(180deg)}
 .card .pip{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);font-size:1.35rem;font-family:Georgia,serif}
 .pips{position:absolute;left:16px;right:16px;top:16px;bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:repeat(3,1fr);place-items:center;font-size:.95rem}
 .card.r{color:#c41e3a}
 .card.x{background:repeating-linear-gradient(45deg,#6e1522 0 7px,#8b1e2d 7px 14px);color:transparent;border:2px solid #fff}
-@keyframes deal{from{transform:translate(-90px,-40px) rotate(-22deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes deal{from{transform:translate(-40px,-18px) rotate(-8deg);opacity:.4}to{transform:none;opacity:1}}
 .acts button,.chip{transition:transform .18s ease,box-shadow .18s ease,opacity .18s}
 .acts button:active,.chip:active{transform:scale(.94)}
 .tot{background:#0006;padding:.15rem .5rem;border-radius:99px;font-size:.8rem}
@@ -163,7 +163,8 @@ function show(i){document.querySelectorAll('.v').forEach(x=>x.classList.remove('
 async function api(p,b){const o={method:b?'POST':'GET',headers:{'Content-Type':'application/json'}};if(token)o.headers.Authorization='Bearer '+token;if(b)o.body=JSON.stringify(b);const r=await fetch(p,o);const d=await r.json();if(r.status===401){token=null;localStorage.removeItem('bj.t');show('login');throw new Error('Session');}if(!r.ok)throw new Error(d.err||'Erreur');return d;}
 let seated=false, dealing=false, lastBet=0, autoT=null, actx=null;
 function beep(f,ms){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.07,t);g.gain.exponentialRampToValueAtTime(.001,t+(ms||.12));o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+(ms||.14));}catch(e){}}
-function sndCard(){beep(180,.05);setTimeout(()=>beep(260,.07),30);setTimeout(()=>beep(140,.09),70);}function sndChip(){beep(160,.07);setTimeout(()=>beep(240,.08),45);}function sndWin(){beep(523,.1);setTimeout(()=>beep(659,.12),90);setTimeout(()=>beep(784,.16),180);}function sndLose(){beep(196,.16);setTimeout(()=>beep(147,.2),120);}
+function noise(ms,freq){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();const n=actx.createBuffer(1,Math.floor(actx.sampleRate*(ms||.05)),actx.sampleRate);const d=n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(d.length*.28));const s=actx.createBufferSource();s.buffer=n;const f=actx.createBiquadFilter();f.type='bandpass';f.frequency.value=freq||1600;const g=actx.createGain();g.gain.value=.2;s.connect(f);f.connect(g);g.connect(actx.destination);s.start();}catch(e){beep(320,.05);}}
+function sndCard(){noise(.05,1700);}function sndChip(){beep(190,.06);setTimeout(()=>beep(240,.05),40);}function sndWin(){beep(880,.07);setTimeout(()=>beep(1175,.08),70);setTimeout(()=>beep(1568,.12),140);}function sndLose(){beep(180,.14);setTimeout(()=>beep(120,.18),90);}
 const PIPS={A:[5],'2':[2,8],'3':[2,5,8],'4':[1,3,7,9],'5':[1,3,5,7,9],'6':[1,3,4,6,7,9],'7':[1,3,4,5,6,7,9],'8':[1,3,4,5,6,7,8,9],'9':[1,2,3,4,6,7,8,9],'10':[1,2,3,4,5,6,7,8,9]};
 function svgChip(v,col){const dash=[];for(let i=0;i<16;i++){const a=i*22.5;dash.push('<path d="M38 4 A34 34 0 0 1 38 4" stroke="none"/>');}
 return '<svg viewBox="0 0 76 76" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="g'+v+'" cx="35%" cy="30%"><stop offset="0%" stop-color="#fff6"/><stop offset="55%" stop-color="'+col+'"/><stop offset="100%" stop-color="#0006"/></radialGradient></defs><circle cx="38" cy="38" r="36" fill="#e8c76a"/><circle cx="38" cy="38" r="33" fill="'+col+'"/><g stroke="#fff" stroke-width="6" fill="none">'+Array.from({length:16},(_,i)=>{const a=i*22.5*Math.PI/180;const x1=38+Math.cos(a)*30,y1=38+Math.sin(a)*30,x2=38+Math.cos(a)*36,y2=38+Math.sin(a)*36;return '<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'"/>';}).join('')+'</g><circle cx="38" cy="38" r="24" fill="url(#g'+v+')"/><g stroke="#f1d48a" stroke-width=".6" opacity=".45">'+Array.from({length:16},(_,i)=>{const a=i*22.5*Math.PI/180;return '<line x1="38" y1="38" x2="'+(38+Math.cos(a)*23).toFixed(1)+'" y2="'+(38+Math.sin(a)*23).toFixed(1)+'"/>';}).join('')+'</g><path d="M28 28 L31 22 L34 28 L38 22 L42 28 L45 22 L48 28 L46 31 L30 31 Z" fill="#f3e2a6"/><text x="38" y="50" text-anchor="middle" font-size="16" font-weight="800" fill="#fff" font-family="Georgia,serif">'+v+'</text></svg>';}
@@ -181,12 +182,15 @@ async function playBet(v){
   try{const ns=await api('/api/miser',{montant:v});await dealSeq(ns);ui(ns,true);}catch(e){if(e.message!=='Attends la fin') alert(e.message);}
 }
 async function dealSeq(s){
-  dealing=true;$('dh').innerHTML='';$('ph').innerHTML='';$('dt').textContent='';$('pt').textContent='';
+  dealing=true;
+  $('dh').innerHTML='';$('dt').textContent='';
+  const row=$('handsRow');
+  if(row)row.innerHTML='<div class="col"><div class="hlab">VOUS</div><div class="hand" id="ph"></div><div class="tot" id="pt"></div></div>';
   const D=s.dealer||[],P=s.player||[];
   const seq=[{w:'ph',c:P[0]},{w:'dh',c:D[0]},{w:'ph',c:P[1]},{w:'dh',c:D[1]}].filter(x=>x.c);
   const seenD=[],seenP=[];
-  for(const step of seq){await new Promise(r=>setTimeout(r,360));sndCard();$(step.w).appendChild(C(step.c));
-    if(step.w==='ph'){seenP.push(step.c);$('pt').textContent=totC(seenP);}
+  for(const step of seq){await new Promise(r=>setTimeout(r,160));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
+    if(step.w==='ph'){seenP.push(step.c);if($('pt'))$('pt').textContent=totC(seenP);}
     else{seenD.push(step.c);$('dt').textContent=totC(seenD.filter(c=>c&&c.v!=='?'));}
   }
   dealing=false;
@@ -201,11 +205,11 @@ async function revealDealer(s){
     if(kids[1]){kids[1].replaceWith(C(D[1]));sndCard();}
     else {box.appendChild(C(D[1]));sndCard();}
     shown.push(D[1]);$('dt').textContent=totC(shown);
-    await new Promise(r=>setTimeout(r,360));
+    await new Promise(r=>setTimeout(r,170));
   }
   for(let i=2;i<D.length;i++){
     if(box.children[i]) continue;
-    await new Promise(r=>setTimeout(r,360));
+    await new Promise(r=>setTimeout(r,170));
     sndCard();box.appendChild(C(D[i]));shown.push(D[i]);$('dt').textContent=totC(shown);
   }
   $('dt').textContent=s.dtot!=null?s.dtot:totC(D);
@@ -249,7 +253,7 @@ function ui(s,skipDeal){
     }catch(e){alert(e.message);}window._act=0;};acts.appendChild(b);});
   const cur=HS[s.which]||HS[0];
   const canSp=s.phase==='play'&&cur&&cur.cards&&cur.cards.length===2&&cur.cards[0].v&&(cur.cards[0].v===cur.cards[1].v||['10','J','Q','K'].includes(cur.cards[0].v)&&['10','J','Q','K'].includes(cur.cards[1].v));
-  if(canSp||s.canSplit){const b=document.createElement('button');b.textContent='Séparer';b.onclick=async()=>{try{const ns=await api('/api/action',{action:'split'});ui(ns,false);}catch(e){alert(e.message);}};acts.appendChild(b);}}}
+  if(canSp||s.canSplit){const b=document.createElement('button');b.textContent='Séparer';b.onclick=async()=>{if(window._act)return;window._act=1;try{sndCard();ui(await api('/api/action',{action:'split'}),true);}catch(e){alert(e.message);}window._act=0;};acts.appendChild(b);}}}
 function render(s){ui(s);}
 
 
