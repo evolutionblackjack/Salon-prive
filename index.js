@@ -64,7 +64,7 @@ transition:background .4s}
 .pips{position:absolute;left:16px;right:16px;top:16px;bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:repeat(3,1fr);place-items:center;font-size:.95rem}
 .card.r{color:#c41e3a}
 .card.x{background:repeating-linear-gradient(45deg,#6e1522 0 7px,#8b1e2d 7px 14px);color:transparent;border:2px solid #fff}
-@keyframes deal{from{transform:translateY(-36px) rotate(-12deg) scale(.92);opacity:0}to{transform:none;opacity:1}}
+@keyframes deal{from{transform:translate(70px,-48px) rotate(18deg);opacity:0}to{transform:none;opacity:1}}
 .acts button,.chip{transition:transform .18s ease,box-shadow .18s ease,opacity .18s}
 .acts button:active,.chip:active{transform:scale(.94)}
 .tot{background:#0006;padding:.15rem .5rem;border-radius:99px;font-size:.8rem}
@@ -73,20 +73,18 @@ transition:background .4s}
 .chipon{width:48px;height:48px;border-radius:50%;border:5px dotted #fff8;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:#fff;margin:.2rem auto;background:radial-gradient(circle at 35% 30%,#666,#111);box-shadow:0 4px 10px #0008}
 .dock{padding:.55rem .6rem calc(.75rem + env(safe-area-inset-bottom));background:repeating-linear-gradient(90deg,#3a2416 0 8px,#2a1810 8px 16px);border-top:3px solid #5a3a22}
 .chips{display:flex;justify-content:center;gap:.5rem;margin-bottom:.5rem}
-.chip{width:66px;height:66px;border-radius:50%;color:#111;font-weight:900;font-size:1.05rem;position:relative;border:3px solid #e8d48b;box-shadow:0 6px 14px #000a;background:repeating-conic-gradient(#fff 0 14deg,currentColor 14deg 28deg)}
-.chip::before{content:"";position:absolute;inset:14px;border-radius:50%;background:#fff8;border:2px solid #e8d48b;z-index:0}
-.chip{z-index:1;display:flex;align-items:center;justify-content:center}
-.chip::before{z-index:0}
+.chip{width:68px;height:68px;border-radius:50%;color:#1a46b8;font-weight:900;font-size:1.15rem;position:relative;border:3px solid #e8d48b;box-shadow:0 6px 14px #000a;background:repeating-conic-gradient(#fff 0 14deg,currentColor 14deg 28deg);display:flex;align-items:center;justify-content:center}
+.chip span{position:relative;z-index:2;width:34px;height:34px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;border:2px solid #e8d48b;font-size:1rem}
 .chip.sel{transform:translateY(-6px) scale(1.1);box-shadow:0 10px 18px #000c}
 .c10{color:#1a46b8}.c25{color:#0f7a32}.c50{color:#c41e3a}
-.chipon{width:52px;height:52px;border-radius:50%;border:3px solid #e8d48b;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#fff;margin:.2rem auto;box-shadow:0 4px 10px #0008;
-background:repeating-conic-gradient(#fff 0 14deg,#333 14deg 28deg)}
+.chipon{width:54px;height:54px;border-radius:50%;border:3px solid #e8d48b;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;color:#111;margin:.2rem auto;box-shadow:0 4px 10px #0008;
+background:radial-gradient(circle,#fff 0 16px,transparent 17px),repeating-conic-gradient(#fff 0 14deg,#333 14deg 28deg)}
 .chipon.on10{background:repeating-conic-gradient(#fff 0 14deg,#1a46b8 14deg 28deg)}
 .chipon.on25{background:repeating-conic-gradient(#fff 0 14deg,#0f7a32 14deg 28deg)}
 .chipon.on50{background:repeating-conic-gradient(#fff 0 14deg,#c41e3a 14deg 28deg)}
-.banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:40;background:#000c;border:2px solid #e8d48b;border-radius:14px;padding:.9rem 1.4rem;text-align:center;animation:in .3s ease}
-.banner b{display:block;letter-spacing:.2em;color:#e8d48b;font-size:.7rem}
-.banner span{font-size:1.6rem;font-weight:800}
+.banner{position:fixed;left:8%;right:8%;top:18%;z-index:40;background:linear-gradient(#1a1408,#000c);border:2px solid #e8d48b;border-radius:12px;padding:.85rem 1rem;text-align:center;animation:deal .28s ease}
+.banner b{display:block;letter-spacing:.28em;color:#e8d48b;font-size:.72rem}
+.banner span{font-size:1.7rem;font-weight:800;color:#fff}
 .acts{display:flex;justify-content:center;gap:.4rem;flex-wrap:wrap}
 .acts button{background:#c9a22722;color:#f4efe4;border:1px solid #c9a22755}
 .acts .p{background:linear-gradient(#e8d48b,#b8860b);color:#1a1205;border:0}
@@ -119,14 +117,14 @@ function show(i){document.querySelectorAll('.v').forEach(x=>x.classList.remove('
 async function api(p,b){const o={method:b?'POST':'GET',headers:{'Content-Type':'application/json'}};if(token)o.headers.Authorization='Bearer '+token;if(b)o.body=JSON.stringify(b);const r=await fetch(p,o);const d=await r.json();if(r.status===401){token=null;localStorage.removeItem('bj.t');show('login');throw new Error('Session');}if(!r.ok)throw new Error(d.err||'Erreur');return d;}
 let seated=false, dealing=false, lastBet=0, autoT=null, actx=null;
 function beep(f,ms){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.07,t);g.gain.exponentialRampToValueAtTime(.001,t+(ms||.12));o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+(ms||.14));}catch(e){}}
-function sndCard(){beep(340,.11);}function sndChip(){beep(180,.08);setTimeout(()=>beep(220,.08),50);}function sndWin(){beep(523,.1);setTimeout(()=>beep(659,.12),80);}
+function sndCard(){beep(220,.06);setTimeout(()=>beep(410,.08),40);}function sndChip(){beep(160,.07);setTimeout(()=>beep(240,.08),45);}function sndWin(){beep(523,.1);setTimeout(()=>beep(659,.12),90);setTimeout(()=>beep(784,.16),180);}function sndLose(){beep(196,.16);setTimeout(()=>beep(147,.2),120);}
 const PIPS={A:[5],'2':[2,8],'3':[2,5,8],'4':[1,3,7,9],'5':[1,3,5,7,9],'6':[1,3,4,6,7,9],'7':[1,3,4,5,6,7,9],'8':[1,3,4,5,6,7,8,9],'9':[1,2,3,4,6,7,8,9],'10':[1,2,3,4,5,6,7,8,9]};
 function C(c){const d=document.createElement('div');const hid=!c||c.v==='?';d.className='card'+(hid?' x':((c.c==='♥'||c.c==='♦')?' r':''));
 if(!hid){const k=c.v+'<br>'+c.c;let mid='';
 if(PIPS[c.v]){mid='<div class="pips">'+[1,2,3,4,5,6,7,8,9].map(n=>'<span>'+(PIPS[c.v].includes(n)?c.c:'')+'</span>').join('')+'</div>';}
 else mid='<div class="pip">'+(c.v==='J'?'V':c.v==='Q'?'D':c.v)+c.c+'</div>';
 d.innerHTML='<div class="c1">'+k+'</div>'+mid+'<div class="c2">'+k+'</div>';}return d;}
-function banner(title,amt){const o=document.querySelector('.banner');if(o)o.remove();const b=document.createElement('div');b.className='banner';b.innerHTML='<b>'+title+'</b><span>€'+amt+'</span>';document.body.appendChild(b);setTimeout(()=>b.remove(),1400);}
+function banner(title,amt){const o=document.querySelector('.banner');if(o)o.remove();const b=document.createElement('div');b.className='banner';b.innerHTML='<b>'+title+'</b><span>€'+amt+'</span>';document.body.appendChild(b);setTimeout(()=>b.remove(),1600);}
 function fillHand(el,cards){el.innerHTML='';(cards||[]).forEach(c=>el.appendChild(C(c)));}
 async function playBet(v){
   if(dealing) return;
@@ -174,10 +172,10 @@ function ui(s,skipDeal){
   }
   if(s.split&&s.phase==='play') $('msg').textContent='Tu joues la MAIN '+(s.which===1?'2':'1');
   const chips=$('chips'),acts=$('acts');chips.innerHTML='';acts.innerHTML='';
-  if(s.phase==='end'&&(s.result==='gagne'||s.result==='blackjack')){sndWin();banner(s.result==='blackjack'?'BLACKJACK':'YOU WIN',s.bet||0);}
-  if(s.phase==='end'&&s.result==='perdu') banner('YOU LOSE',0);
+  if(s.phase==='end'&&(s.result==='gagne'||s.result==='blackjack'||(s.result||'').includes('gagne'))){sndWin();banner(s.result==='blackjack'?'BLACKJACK':'YOU WIN',s.bet||0);}
+  if(s.phase==='end'&&(s.result==='perdu'||(s.result||'').includes('perdu')&&!(s.result||'').includes('gagne'))) {sndLose();banner('YOU LOSE',s.bet||0);}
   if((s.phase==='bet'||s.phase==='end')&&seated){
-    [10,25,50].forEach(v=>{const b=document.createElement('button');b.className='chip c'+v+(lastBet===v?' sel':'');b.textContent='♛ '+v;b.onclick=()=>{lastBet=v;sndChip();const mid=$('chipon');mid.textContent=v;mid.className='chipon on'+v;};chips.appendChild(b);});
+    [10,25,50].forEach(v=>{const b=document.createElement('button');b.className='chip c'+v+(lastBet===v?' sel':'');b.innerHTML='<span>'+v+'</span>';b.onclick=()=>{lastBet=v;sndChip();const mid=$('chipon');mid.textContent=v;mid.className='chipon on'+v;};chips.appendChild(b);});
     const go=document.createElement('button');go.className='p';go.style.minWidth='160px';go.style.fontSize='1rem';
     go.textContent=s.phase==='end'?'REJOUER':'JOUER';
     go.onclick=()=>{if(!lastBet){alert('Tape d abord un jeton (10 25 50)');return;}playBet(lastBet);};
