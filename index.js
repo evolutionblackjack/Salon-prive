@@ -902,6 +902,25 @@ input{font-family:inherit}
 .win-banner.lose{border-color:#888}
 .win-banner.lose .wb-t{color:#bbb}
 
+
+.age-page{background:#0d3b2a;background-image:radial-gradient(#0a2a1e 1px,transparent 1px);background-size:18px 18px;align-items:center;justify-content:center;padding:1.2rem}
+.age-card{width:min(360px,100%);background:linear-gradient(180deg,#1c6b45,#124f34);border:2px solid #c9a227;border-radius:16px;padding:1.3rem 1.1rem;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.age-title{font-size:1.5rem;font-weight:800;color:#f0c14a;letter-spacing:.06em;margin-bottom:.5rem}
+.age-card p{font-size:.82rem;margin-bottom:.8rem}
+.age-row{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#e0c15a,#a07818);border-radius:10px;padding:.35rem .5rem;margin-bottom:.7rem}
+.age-row button{width:44px;height:44px;border:none;background:transparent;color:#1a1205;font-size:1.8rem;font-weight:700}
+#ageVal{font-size:2rem;font-weight:800;color:#1a1205}
+#ageRange{width:100%;accent-color:#f0c14a}
+.age-scale{display:flex;justify-content:space-between;font-size:.7rem;opacity:.7;margin:.2rem 0 .7rem}
+.age-legal{font-size:.68rem;opacity:.8}
+.welcome-page{background:#05070c}
+.welcome-sky{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem 1rem;background:radial-gradient(ellipse at 50% 20%,#2a3a6a 0%,#0a1020 55%,#05070c 100%)}
+.welcome-kicker{letter-spacing:.22em;font-size:.72rem;color:#f0c14a;margin-bottom:1rem}
+.vegas-badge{width:210px;height:210px;border-radius:50%;border:10px solid #c41e3a;background:radial-gradient(circle,#fff 0 42%,#111 42% 48%,#fff 48%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#c41e3a;font-weight:800;font-size:1.15rem;letter-spacing:.12em;text-align:center;margin-bottom:1.2rem;box-shadow:0 0 30px rgba(196,30,58,.35)}
+.vegas-badge small{color:#1a3a8a;font-size:.62rem;letter-spacing:.16em}
+.welcome-box{background:rgba(0,0,0,.55);border-radius:10px;padding:.8rem 1.2rem;text-align:center;margin-bottom:1.2rem;font-size:.88rem;line-height:1.55}
+.btn-play{background:linear-gradient(180deg,#ffb347,#e67a00);color:#1a1205;border:none;border-radius:12px;padding:.85rem 2.4rem;font-weight:800;font-size:1.05rem;letter-spacing:.06em}
+
 /* PROFIL / REGIE */
 .panel{flex:1;padding:1.2rem;max-width:480px;margin:0 auto;width:100%}
 .panel h2{color:var(--or);font-size:1.1rem;letter-spacing:.1em;margin-bottom:1rem}
@@ -924,8 +943,39 @@ input{font-family:inherit}
     <div class="splash-title">BLACKJACK<br>ÉVOLUTION</div>
     <div class="splash-sub">TABLES PRIVÉES · JETONS FICTIFS</div>
     <div class="splash-line"></div>
-    <button class="btn-gold" id="btnEnterSplash" onclick="document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on')});document.getElementById('login').classList.add('on')">ENTRER</button>
+    <button class="btn-gold" id="btnEnterSplash">ENTRER</button>
     <p class="splash-note">ACCÈS SUR INVITATION</p>
+  </div>
+</div>
+
+<div id="age" class="page age-page">
+  <div class="age-card">
+    <div class="age-title">BLACKJACK!</div>
+    <p>Veuillez indiquer votre âge. Le gameplay ne sera pas affecté.</p>
+    <div class="age-row">
+      <button type="button" id="ageMoins">−</button>
+      <div id="ageVal">18</div>
+      <button type="button" id="agePlus">+</button>
+    </div>
+    <input id="ageRange" type="range" min="0" max="99" value="18">
+    <div class="age-scale"><span>0</span><span>99+</span></div>
+    <p class="age-legal">Salon de jetons fictifs — blague entre amis.</p>
+    <button class="btn-gold" id="btnAgeOk">Confirmer</button>
+    <p class="err" id="ageErr"></p>
+  </div>
+</div>
+
+<div id="welcome" class="page welcome-page">
+  <div class="welcome-sky">
+    <p class="welcome-kicker">BLACKJACK ÉVOLUTION</p>
+    <div class="vegas-badge">WELCOME<br><small>TABLES PRIVÉES</small></div>
+    <div class="welcome-box">
+      <div>Tapis minimum €10</div>
+      <div>Mise minimum €10</div>
+      <div>Mise maximum €100</div>
+      <div>Tables : 3 · 5 places</div>
+    </div>
+    <button class="btn-play" id="btnWelcomePlay">Jouer</button>
   </div>
 </div>
 
@@ -1110,7 +1160,18 @@ function carteEl(c, small){
   return e;
 }
 
-$('btnEnterSplash').onclick=()=>show('login');
+$('btnEnterSplash').onclick=()=>show('age');
+function setAge(n){n=Math.max(0,Math.min(99,+n||0)); $('ageVal').textContent=n; $('ageRange').value=n;}
+$('ageMoins').onclick=()=>setAge(+$('ageVal').textContent-1);
+$('agePlus').onclick=()=>setAge(+$('ageVal').textContent+1);
+$('ageRange').oninput=()=>setAge($('ageRange').value);
+$('btnAgeOk').onclick=()=>{
+  $('ageErr').textContent='';
+  if(+$('ageVal').textContent<18){ $('ageErr').textContent='18 ans minimum pour entrer.'; return; }
+  show('welcome');
+};
+$('btnWelcomePlay').onclick=()=>show('login');
+
 $('btnLogin').onclick=async()=>{
   $('loginErr').textContent='';
   try{
