@@ -217,6 +217,20 @@ async function revealDealer(s){
   $('dt').textContent=s.dtot!=null?s.dtot:totC(D);
   dealing=false;
 }
+function paintHands(s){
+  const HS=s.hands&&s.hands.length?s.hands:[{cards:s.player,bet:s.bet}].concat(s.split?[{cards:s.split,bet:s.bet2}]:[]);
+  const row=$('handsRow'); if(!row)return HS;
+  row.innerHTML='';
+  HS.slice(0,4).forEach((h,i)=>{
+    const col=document.createElement('div');
+    col.className='col'+(s.which===i&&s.phase==='play'?' on':'');
+    const lab=document.createElement('div');lab.className='hlab';lab.textContent=HS.length>1?('MAIN '+(i+1)+' · €'+(h.bet||0)):'VOUS';
+    const hd=document.createElement('div');hd.className='hand';fillHand(hd,h.cards||[]);
+    const tt=document.createElement('div');tt.className='tot';tt.textContent=totC(h.cards||[]);
+    col.appendChild(lab);col.appendChild(hd);col.appendChild(tt);row.appendChild(col);
+  });
+  return HS;
+}
 function ui(s,skipDeal){
   moi.solde=s.solde;$('solde').textContent='€'+s.solde;if($('railSolde'))$('railSolde').textContent=s.solde;if($('railMise'))$('railMise').textContent=s.bet||lastBet||0;$('who').textContent=s.pseudo;$('msg').textContent=s.msg||'';
   const mid=$('chipon');const shown=s.bet||lastBet||0;if(shown){mid.innerHTML=svgChip(shown,shown>=50?'#c42838':shown>=25?'#1a8a3a':'#1e4ec4');}else mid.innerHTML='';mid.className='chipon';
@@ -250,8 +264,10 @@ function ui(s,skipDeal){
     acts.appendChild(go);
   }
   if(s.phase==='play'){window._hand=s.which||0;const actsList=[['Tirer','hit']];if(s.canDouble)actsList.push(['Doubler','double']);actsList.push(['Rester','stand']);actsList.forEach(([l,a],i)=>{const b=document.createElement('button');if(a==='stand')b.className='p';if(a==='double'){b.className='p';b.style.background='#1e5a9c';b.style.color='#fff';}b.textContent=l;b.onclick=async()=>{if(window._act)return;window._act=1;try{const ns=await api('/api/action',{action:a});sndCard();
-      if(ns.phase==='end'){ui(ns,true);await new Promise(r=>setTimeout(r,320));await revealDealer(ns);ui(ns,true);}
-      else ui(ns,true);
+      paintHands(ns);
+      if(a==='double'||a==='hit')await new Promise(r=>setTimeout(r,420));
+      if(ns.phase==='end'){await revealDealer(ns);ui(ns,'keep');}
+      else ui(ns,'keep');
     }catch(e){alert(e.message);}window._act=0;};acts.appendChild(b);});
   const cur=HS[s.which]||HS[0];
   const canSp=s.phase==='play'&&cur&&cur.cards&&cur.cards.length===2&&cur.cards[0].v&&(cur.cards[0].v===cur.cards[1].v||['10','J','Q','K'].includes(cur.cards[0].v)&&['10','J','Q','K'].includes(cur.cards[1].v));
