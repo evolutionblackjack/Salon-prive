@@ -19,16 +19,26 @@ const MODE_LABELS = {
   aleatoire: 'Aléatoire',
   perte: 'Perte',
   grosse_perte: 'Grosse perte',
+  pipo: 'Pipo',
   gain: 'Gain',
   gros_gain: 'Gros gain',
   bingo: 'Bingo'
+};
+const MODE_BANK = {
+  aleatoire: 0.5,
+  gain: 0.65,
+  gros_gain: 0.75,
+  bingo: 0.90,
+  perte: 0.35,
+  grosse_perte: 0.25,
+  pipo: 0.10
 };
 
 function creerSabot() {
   const C = ['♠', '♥', '♦', '♣'];
   const V = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   const a = [];
-  for (let d = 0; d < 6; d++) for (const c of C) for (const v of V) a.push({ v, c, id: uuid() });
+  for (let d = 0; d < 5; d++) for (const c of C) for (const v of V) a.push({ v, c, id: uuid() });
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
@@ -110,6 +120,15 @@ comptes.set(AID, {
   solde: 999999,
   actif: true
 });
+const PID = uuid();
+comptes.set(PID, {
+  id: PID,
+  pseudo: 'maelu',
+  code: 'tuleccc',
+  role: 'joueur',
+  solde: 5000,
+  actif: true
+});
 
 function compteFromReq(req) {
   const h = req.headers.authorization || '';
@@ -155,13 +174,13 @@ function tirer(table, pourCroupier, context) {
 
   const wantDealerWin =
     mode === 'gain' || mode === 'gros_gain' || mode === 'bingo';
-  const wantPlayerWin = mode === 'perte' || mode === 'grosse_perte';
+  const wantPlayerWin = mode === 'perte' || mode === 'grosse_perte' || mode === 'pipo';
   const strength =
-    mode === 'bingo' ? 1 :
-    mode === 'gros_gain' || mode === 'grosse_perte' ? 0.85 :
-    mode === 'gain' || mode === 'perte' ? 0.6 : 0.5;
+    mode === 'bingo' || mode === 'pipo' ? 0.90 :
+    mode === 'gros_gain' || mode === 'grosse_perte' ? 0.75 :
+    mode === 'gain' || mode === 'perte' ? 0.65 : 0.5;
 
-  if (Math.random() > strength && mode !== 'bingo') return table.sabot.pop();
+  if (Math.random() > strength && mode !== 'bingo' && mode !== 'pipo') return table.sabot.pop();
 
   const slice = table.sabot.slice(-12);
   const tj = context && context.totJoueur != null ? context.totJoueur : null;
@@ -1330,8 +1349,8 @@ $('btnSaveProfil').onclick=async()=>{
   }catch(e){$('profMsg').textContent=e.message; $('profMsg').style.color='#fca5a5';}
 };
 
-const MODE_KEYS=['aleatoire','perte','grosse_perte','gain','gros_gain','bingo'];
-const MODE_L={aleatoire:'Aléatoire',perte:'Perte',grosse_perte:'Grosse perte',gain:'Gain',gros_gain:'Gros gain',bingo:'Bingo'};
+const MODE_KEYS=['aleatoire','perte','grosse_perte','pipo','gain','gros_gain','bingo'];
+const MODE_L={aleatoire:'Aléatoire',perte:'Perte (joueurs 65%)',grosse_perte:'Grosse perte (joueurs 75%)',pipo:'Pipo (joueurs 90%)',gain:'Gain (banque 65%)',gros_gain:'Gros gain (banque 75%)',bingo:'Bingo (banque 90%)'};
 $('btnRegie').onclick=async()=>{ await loadRegie(); show('regie'); };
 $('btnBackRegie').onclick=()=>goLobby();
 async function loadRegie(){
