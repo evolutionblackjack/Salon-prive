@@ -257,11 +257,11 @@ function publicTable(table, viewer) {
   const isAdmin = viewer && viewer.role === 'admin';
   const phase = table.phase;
   const croupierPublic = table.croupier.map((c, i) => {
-    if (phase === 'jeu' && i === 1) return { v: '?', c: '?', cachee: true };
+    if ((phase === 'jeu' || phase === 'distribution') && i === 1) return { v: '?', c: '?', cachee: true };
     return c;
   });
   let totC = null;
-  if (phase !== 'jeu') totC = table.croupier.length ? tot(table.croupier) : null;
+  if (phase !== 'jeu' && phase !== 'distribution') totC = table.croupier.length ? tot(table.croupier) : null;
   else if (table.croupier[0]) totC = val(table.croupier[0]);
 
   return {
@@ -303,12 +303,14 @@ function tryStartRound(table) {
   if (table.phase !== 'mises' && table.phase !== 'attente') return;
   const avecMise = table.sieges.filter(s => s.joueurId && s.mise >= table.minMise);
   if (!avecMise.length) return;
-  table.phase = 'jeu';
-  table.message = 'Rien ne va plus';
+  table.phase = 'distribution';
+  table.message = 'Distribution…';
   table.croupier = [];
+  table.tourSiege = -1;
   for (const s of table.sieges) {
     if (s.joueurId && s.mise >= table.minMise) {
       s.main = [];
+      s.main2 = null;
       s.statut = 'en_jeu';
       s.resultat = null;
       s.message = '';
@@ -316,25 +318,39 @@ function tryStartRound(table) {
       s.statut = 'spectateur';
     }
   }
+  const file = [];
   for (let r = 0; r < 2; r++) {
     for (const s of table.sieges) {
-      if (s.statut === 'en_jeu') s.main.push(tirer(table, false, { totJoueur: tot(s.main) }));
+      if (s.statut === 'en_jeu') file.push({ type: 'j', s });
     }
-    table.croupier.push(tirer(table, true, {}));
+    file.push({ type: 'c' });
   }
-  for (const s of table.sieges) {
-    if (s.statut === 'en_jeu' && isBJ(s.main)) {
-      s.statut = 'blackjack';
-      s.message = 'Blackjack';
+  let i = 0;
+  const poser = () => {
+    if (table.phase !== 'distribution') return;
+    if (i >= file.length) {
+      for (const s of table.sieges) {
+        if (s.statut === 'en_jeu' && isBJ(s.main)) {
+          s.statut = 'blackjack';
+          s.message = 'Blackjack';
+        }
+      }
+      table.phase = 'jeu';
+      const next = table.sieges.findIndex(s => s.statut === 'en_jeu');
+      if (next < 0) finirCroupierEtRegler(table);
+      else {
+        table.tourSiege = next;
+        table.message = 'Tour de ' + (table.sieges[next].pseudo || 'joueur');
+      }
+      return;
     }
-  }
-  const next = table.sieges.findIndex(s => s.statut === 'en_jeu');
-  if (next < 0) {
-    finirCroupierEtRegler(table);
-  } else {
-    table.tourSiege = next;
-    table.message = 'Tour de ' + (table.sieges[next].pseudo || 'joueur');
-  }
+    const step = file[i++];
+    if (step.type === 'j') step.s.main.push(tirer(table, false, { totJoueur: tot(step.s.main) }));
+    else table.croupier.push(tirer(table, true, {}));
+    table.message = 'Distribution…';
+    setTimeout(poser, 480);
+  };
+  setTimeout(poser, 200);
 }
 
 function finirCroupierEtRegler(table) {
