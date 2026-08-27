@@ -179,7 +179,7 @@ function fillHand(el,cards){el.innerHTML='';(cards||[]).forEach((c,i,a)=>{const 
 async function playBet(v){
   if(dealing) return;
   lastBet=v;
-  try{const ns=await api('/api/miser',{montant:v});await dealSeq(ns);ui(ns,true);}catch(e){if(e.message!=='Attends la fin') alert(e.message);}
+  try{const ns=await api('/api/miser',{montant:v});await dealSeq(ns);ui(ns,'keep');}catch(e){if(e.message!=='Attends la fin') alert(e.message);}
 }
 async function dealSeq(s){
   dealing=true;
@@ -187,9 +187,9 @@ async function dealSeq(s){
   const row=$('handsRow');
   if(row)row.innerHTML='<div class="col"><div class="hlab">VOUS</div><div class="hand" id="ph"></div><div class="tot" id="pt"></div></div>';
   const D=s.dealer||[],P=s.player||[];
-  const seq=[{w:'ph',c:P[0]},{w:'dh',c:D[0]},{w:'ph',c:P[1]},{w:'dh',c:D[1]}].filter(x=>x.c);
+  const seq=[{w:'ph',c:P[0]},{w:'ph',c:P[1]},{w:'dh',c:D[0]},{w:'dh',c:D[1]}].filter(x=>x.c);
   const seenD=[],seenP=[];
-  for(const step of seq){await new Promise(r=>setTimeout(r,160));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
+  for(const step of seq){await new Promise(r=>setTimeout(r,240));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
     if(step.w==='ph'){seenP.push(step.c);if($('pt'))$('pt').textContent=totC(seenP);}
     else{seenD.push(step.c);$('dt').textContent=totC(seenD.filter(c=>c&&c.v!=='?'));}
   }
@@ -222,7 +222,7 @@ function ui(s,skipDeal){
   const HS=s.hands&&s.hands.length?s.hands:[{cards:s.player,bet:s.bet,tot:s.ptot}].concat(s.split?[{cards:s.split,bet:s.bet2,tot:s.stot}]:[]);
   if(!skipDeal){fillHand($('dh'),s.dealer);$('dt').textContent=s.dtot!=null?s.dtot:'';}
   const row=$('handsRow');
-  if(row){
+  if(row&&skipDeal!=='keep'){
     row.innerHTML='';
     HS.slice(0,4).forEach((h,i)=>{
       const col=document.createElement('div');
