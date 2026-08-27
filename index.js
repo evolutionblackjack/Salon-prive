@@ -959,7 +959,7 @@ input{font-family:inherit}
     </div>
     <input id="ageRange" type="range" min="0" max="99" value="18">
     <div class="age-scale"><span>0</span><span>99+</span></div>
-    <p class="age-legal">Salon de jetons fictifs — blague entre amis.</p>
+    <p class="age-legal">En appuyant sur Confirmer, vous acceptez les conditions d'accès.</p>
     <button class="btn-gold" id="btnAgeOk">Confirmer</button>
     <p class="err" id="ageErr"></p>
   </div>
