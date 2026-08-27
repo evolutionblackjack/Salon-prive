@@ -45,10 +45,10 @@ button{border:0;border-radius:8px;padding:.7rem 1rem;font-weight:700}
 .felt{flex:1;padding:.7rem .6rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.35rem;background:radial-gradient(ellipse at 50% 30%,#7a2030,#4a1020 55%,#2a0a12)}
 .lab{font-size:.65rem;letter-spacing:.18em;opacity:.7;color:#f0d9a0}
 .hand{display:flex;gap:.3rem;min-height:82px}
-.card{width:58px;height:82px;border-radius:8px;background:linear-gradient(#fff,#f3efe6);color:#111;position:relative;box-shadow:0 8px 14px #0006;animation:deal .4s ease;border:1px solid #ddd}
-.card b{position:absolute;top:4px;left:5px;font-size:.72rem;line-height:1}
-.card i{position:absolute;bottom:4px;right:5px;font-size:.72rem;line-height:1;transform:rotate(180deg);font-style:normal}
-.card em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-style:normal}
+.card{width:62px;height:90px;border-radius:8px;background:linear-gradient(#fff,#f6f0e4);color:#1a1208;position:relative;box-shadow:0 10px 16px #0007,inset 0 0 0 1px #e4d9c4;animation:deal .4s ease}
+.card .c1,.card .c2{position:absolute;width:18px;text-align:center;font-family:Georgia,'Times New Roman',serif;font-weight:800;line-height:1.05;font-size:.78rem}
+.card .c1{top:5px;left:4px}.card .c2{bottom:5px;right:4px;transform:rotate(180deg)}
+.card .pip{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);font-size:1.75rem}
 .card.r{color:#c41e3a}
 .card.x{background:repeating-linear-gradient(45deg,#6e1522 0 7px,#8b1e2d 7px 14px);color:transparent;border:2px solid #fff}
 @keyframes deal{from{transform:translateY(-28px) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}
@@ -58,8 +58,8 @@ button{border:0;border-radius:8px;padding:.7rem 1rem;font-weight:700}
 .chipon{width:34px;height:34px;border-radius:50%;border:3px dashed #f0c14a;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;color:#f5e6b8;margin:.15rem auto}
 .dock{padding:.55rem .6rem calc(.75rem + env(safe-area-inset-bottom));background:#1a0c10}
 .chips{display:flex;justify-content:center;gap:.5rem;margin-bottom:.5rem}
-.chip{width:50px;height:50px;border-radius:50%;color:#fff;font-weight:800;font-size:.72rem;position:relative;border:4px solid rgba(255,255,255,.4);box-shadow:0 4px 8px #0007,inset 0 1px 0 #fff4}
-.chip::after{content:'';position:absolute;inset:5px;border-radius:50%;border:1.5px dashed #fff8;pointer-events:none}
+.chip{width:52px;height:52px;border-radius:50%;color:#fff;font-weight:800;font-size:.7rem;position:relative;border:5px dotted rgba(255,255,255,.75);box-shadow:0 5px 10px #0008,inset 0 0 0 7px rgba(0,0,0,.18),inset 0 2px 0 #fff3}
+.chip.sel{transform:translateY(-4px) scale(1.06);box-shadow:0 8px 16px #000a}
 .c10{background:radial-gradient(circle at 35% 30%,#6aa8f0,#163a8a)}
 .c25{background:radial-gradient(circle at 35% 30%,#6ae09a,#0a5a30)}
 .c50{background:radial-gradient(circle at 35% 30%,#f2c75a,#8a6010)}
@@ -96,11 +96,16 @@ button{border:0;border-radius:8px;padding:.7rem 1rem;font-weight:700}
 const $=i=>document.getElementById(i);let token=localStorage.getItem('bj.t'),moi=null;
 function show(i){document.querySelectorAll('.v').forEach(x=>x.classList.remove('on'));$(i).classList.add('on');}
 async function api(p,b){const o={method:b?'POST':'GET',headers:{'Content-Type':'application/json'}};if(token)o.headers.Authorization='Bearer '+token;if(b)o.body=JSON.stringify(b);const r=await fetch(p,o);const d=await r.json();if(r.status===401){token=null;localStorage.removeItem('bj.t');show('login');throw new Error('Session');}if(!r.ok)throw new Error(d.err||'Erreur');return d;}
-let seated=false, dealing=false;
+let seated=false, dealing=false, lastBet=0, autoT=null;
 function C(c){const d=document.createElement('div');const hid=!c||c.v==='?';d.className='card'+(hid?' x':((c.c==='♥'||c.c==='♦')?' r':''));
-if(!hid){d.innerHTML='<b>'+c.v+'</b><em>'+c.c+'</em><i>'+c.v+'</i>';}return d;}
+if(!hid){const k=c.v+'<br>'+c.c;d.innerHTML='<div class="c1">'+k+'</div><div class="pip">'+c.c+'</div><div class="c2">'+k+'</div>';}return d;}
 function banner(title,amt){const o=document.querySelector('.banner');if(o)o.remove();const b=document.createElement('div');b.className='banner';b.innerHTML='<b>'+title+'</b><span>€'+amt+'</span>';document.body.appendChild(b);setTimeout(()=>b.remove(),1400);}
 function fillHand(el,cards){el.innerHTML='';(cards||[]).forEach(c=>el.appendChild(C(c)));}
+async function playBet(v){
+  if(dealing) return;
+  lastBet=v;
+  try{const ns=await api('/api/miser',{montant:v});await dealSeq(ns);ui(ns,true);}catch(e){if(e.message!=='Attends la fin') alert(e.message);}
+}
 async function dealSeq(s){
   dealing=true;$('dh').innerHTML='';$('ph').innerHTML='';$('dt').textContent='';$('pt').textContent='';
   const D=s.dealer||[],P=s.player||[];
@@ -118,14 +123,19 @@ function ui(s,skipDeal){
   const chips=$('chips'),acts=$('acts');chips.innerHTML='';acts.innerHTML='';
   if(s.phase==='end'&&(s.result==='gagne'||s.result==='blackjack')) banner(s.result==='blackjack'?'BLACKJACK':'YOU WIN',s.bet||0);
   if(s.phase==='end'&&s.result==='perdu') banner('YOU LOSE',0);
-  if((s.phase==='bet'||s.phase==='end')&&seated){[10,25,50,100].forEach(v=>{const b=document.createElement('button');b.className='chip c'+v;b.textContent=v;b.onclick=async()=>{try{const ns=await api('/api/miser',{montant:v});await dealSeq(ns);ui(ns,true);}catch(e){alert(e.message);}};chips.appendChild(b);});}
+  if((s.phase==='bet'||s.phase==='end')&&seated){
+    [10,25,50,100].forEach(v=>{const b=document.createElement('button');b.className='chip c'+v+(lastBet===v?' sel':'');b.textContent=v;b.onclick=()=>{lastBet=v;$('chipon').textContent=v;ui(s);};chips.appendChild(b);});
+    const go=document.createElement('button');go.className='p';go.textContent=s.phase==='end'?'Rejouer':'Jouer';
+    go.onclick=()=>{if(!lastBet){alert('Pose d abord un jeton');return;}playBet(lastBet);};
+    acts.appendChild(go);
+  }
   if(s.phase==='play'&&!dealing){[['Tirer','hit'],['Doubler','double'],['Rester','stand']].forEach(([l,a],i)=>{const b=document.createElement('button');if(i===2)b.className='p';b.textContent=l;b.onclick=async()=>{try{const ns=await api('/api/action',{action:a});ui(ns);}catch(e){alert(e.message);}};acts.appendChild(b);});
   if(s.canSplit){const b=document.createElement('button');b.textContent='Séparer';b.onclick=async()=>{try{ui(await api('/api/action',{action:'split'}));}catch(e){alert(e.message);}};acts.appendChild(b);}}}
 function render(s){ui(s);}
 
 $('go').onclick=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));}catch(e){$('er').textContent=e.message;}};
 $('seat').onclick=()=>{seated=true;api('/api/etat').then(render);};
-$('out').onclick=()=>{token=null;localStorage.removeItem('bj.t');show('login');};
+$('out').onclick=()=>{if(autoT)clearTimeout(autoT);lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
 $('admBtn').onclick=async()=>{show('admin');const d=await api('/api/admin');const m=$('modes');m.innerHTML='<h2>Mode</h2>';Object.entries(d.modes).forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.style.margin='.2rem';if(d.mode===k)b.className='g';b.onclick=async()=>{await api('/api/admin',{mode:k});$('admBtn').click();};m.appendChild(b);});
 const list=$('clist');list.innerHTML='';d.comptes.forEach(c=>{const r=document.createElement('div');r.className='row';r.innerHTML='<span>'+c.pseudo+' / '+c.code+' · €'+c.solde+'</span>';const i=document.createElement('input');i.type='number';i.placeholder='+/-';const ok=document.createElement('button');ok.className='g';ok.textContent='OK';ok.onclick=async()=>{await api('/api/admin',{jetons:{id:c.id,delta:+i.value||0}});$('admBtn').click();};r.appendChild(i);r.appendChild(ok);list.appendChild(r);});};
 $('ncBtn').onclick=async()=>{await api('/api/admin',{nouveau:{pseudo:$('np').value,code:$('nc').value,solde:+$('ns').value||2000}});$('admBtn').click();};
