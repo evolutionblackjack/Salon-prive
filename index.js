@@ -289,7 +289,8 @@ function publicTable(table, viewer) {
       message: s.message,
       gainAffiche: s.gainAffiche || 0,
       estMoi: viewer ? s.joueurId === viewer.id : false,
-      peutSeparer: peutSeparer(s.main) && !s.main2
+      peutSeparer: peutSeparer(s.main) && !s.main2 && (!s.jeuMain || s.jeuMain === 1),
+      jeuMain: s.jeuMain || 1
     }))
   };
 }
@@ -675,14 +676,22 @@ async function handleApi(req, res, path) {
         nextPlayerOrDealer(table);
       }
     } else if (action === 'doubler') {
-      if (seat.main.length !== 2) return send(res, 400, { erreur: 'Double sur 2 cartes' });
-      if (moi.solde < seat.mise) return send(res, 400, { erreur: 'Solde insuffisant' });
-      moi.solde -= seat.mise;
-      seat.mise *= 2;
-      seat.main.push(tirer(table, false, { totJoueur: tot(seat.main) }));
-      seat.statut = tot(seat.main) > 21 ? 'creve' : 'reste';
-      if (seat.statut === 'creve') seat.message = 'Perdu';
-      nextPlayerOrDealer(table);
+      const hand = seat[courante];
+      if (!hand || hand.length !== 2) return send(res, 400, { erreur: 'Double sur 2 cartes' });
+      const miseAct = courante === 'main2' ? (seat.mise2 || seat.mise) : seat.mise;
+      if (moi.solde < miseAct) return send(res, 400, { erreur: 'Solde insuffisant' });
+      moi.solde -= miseAct;
+      if (courante === 'main2') seat.mise2 = miseAct * 2;
+      else seat.mise *= 2;
+      hand.push(tirer(table, false, { totJoueur: tot(hand) }));
+      if (courante === 'main' && seat.main2) {
+        seat.jeuMain = 2;
+        table.message = 'Main 2 — ' + seat.pseudo;
+      } else {
+        seat.statut = tot(hand) > 21 ? 'creve' : 'reste';
+        if (seat.statut === 'creve') seat.message = 'Perdu';
+        nextPlayerOrDealer(table);
+      }
     } else if (action === 'separer') {
       if (!peutSeparer(seat.main) || seat.main2) return send(res, 400, { erreur: 'Séparation impossible' });
       if (moi.solde < seat.mise) return send(res, 400, { erreur: 'Solde insuffisant' });
@@ -816,6 +825,10 @@ input{font-family:inherit}
 
 /* LOBBY */
 #lobby{background:radial-gradient(ellipse at 50% 0%,#1a1008,#0a0604)}
+.lobby-hero{margin:.8rem 1rem 0;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 50% 0%,#9a2030,#2a0810 62%,#100406);border:1px solid rgba(201,162,39,.35);padding:1.5rem 1rem 1.2rem;text-align:center}
+.lobby-hero h1{font-size:1.6rem;letter-spacing:.04em;font-weight:800;line-height:1.05;color:#fff}
+.lobby-hero h1 span{display:block;font-style:italic;color:#f0c14a;font-size:1.05rem;letter-spacing:.22em;margin-top:.12rem}
+.lobby-hero p{margin-top:.4rem;font-size:.68rem;opacity:.65;letter-spacing:.14em}
 .lobby-wrap{flex:1;padding:1.2rem;max-width:560px;margin:0 auto;width:100%}
 .lobby-wrap h2{font-size:.7rem;letter-spacing:.2em;opacity:.5;margin-bottom:1rem;text-transform:uppercase}
 .table-card{background:linear-gradient(145deg,rgba(30,20,12,.9),rgba(15,10,6,.95));border:1px solid rgba(201,162,39,.22);border-radius:14px;padding:1.1rem 1.2rem;margin-bottom:.8rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;transition:border-color .2s,transform .15s}
@@ -847,9 +860,9 @@ input{font-family:inherit}
 .bet-spot.ready{border-style:solid;border-color:#f0c14a;background:rgba(240,193,74,.15);animation:pulse .9s infinite}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 .seats-row{display:flex;justify-content:center;gap:.35rem;width:100%;flex-wrap:nowrap;padding:0 .15rem;overflow-x:auto}
-.seat{flex:1;min-width:58px;max-width:88px;background:rgba(0,0,0,.32);border:2px solid rgba(255,255,255,.12);border-radius:14px;padding:.45rem .2rem .4rem;text-align:center;font-size:.62rem}
-.seat.mine{border-color:#f0c14a;box-shadow:0 0 14px rgba(240,193,74,.35);background:rgba(20,40,30,.55)}
-.seat.empty{opacity:.55;border-style:dashed}
+.seat{flex:1;min-width:64px;max-width:92px;background:radial-gradient(circle at 50% 40%,#0d4a28,#062016);border:3px solid #1cff7a;border-radius:50%;aspect-ratio:1;padding:.35rem .15rem;text-align:center;font-size:.58rem;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(28,255,122,.25),inset 0 0 10px rgba(0,0,0,.35)}
+.seat.mine{border-color:#f0c14a;box-shadow:0 0 16px rgba(240,193,74,.45)}
+.seat.empty{opacity:.9}
 .seat .sn{font-weight:700;color:#f5e6b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.6rem}
 .seat .sm{color:#fff;opacity:.85;margin:.12rem 0;font-size:.6rem}
 .seat .sc{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;min-height:30px}
@@ -922,6 +935,10 @@ input{font-family:inherit}
       <button class="icon-btn" id="btnRegie" style="display:none" title="Régie">⚙</button>
       <button class="icon-btn" id="btnLogout">✕</button>
     </div>
+  </div>
+  <div class="lobby-hero">
+    <h1>BLACKJACK<br>LOBBY <span>Live</span></h1>
+    <p>TABLES PRIVÉES · JETONS FICTIFS</p>
   </div>
   <div class="lobby-wrap">
     <h2>Choisir une table</h2>
@@ -1029,6 +1046,22 @@ function logout(callApi){
 }
 let audioCtx=null;
 function ensureAudio(){if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume();}
+function playWinSound(){
+  try{
+    ensureAudio();
+    const t=audioCtx.currentTime;
+    [523,659,784].forEach((f,i)=>{
+      const o=audioCtx.createOscillator();
+      const g=audioCtx.createGain();
+      o.type='sine'; o.frequency.value=f;
+      g.gain.setValueAtTime(0.0001,t+i*0.07);
+      g.gain.exponentialRampToValueAtTime(0.09,t+i*0.07+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+i*0.07+0.25);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t+i*0.07); o.stop(t+i*0.07+0.28);
+    });
+  }catch(e){}
+}
 function playCardSound(){
   try{
     ensureAudio();
@@ -1137,7 +1170,7 @@ function renderTable(t){
   t.sieges.forEach(s=>{
     const el=document.createElement('div');
     el.className='seat'+(s.estMoi?' mine':'')+(s.pseudo?'':' empty')+(t.tourSiege===s.index?' turn':'');
-    el.innerHTML='<div class="sn">'+(s.pseudo||'Place')+'</div><div class="sm">'+(s.mise?'€'+s.mise:(s.pseudo?'—':'·'))+(s.tot!=null && !s.estMoi?' · '+s.tot:'')+'</div>';
+    el.innerHTML='<div class="sn">'+(s.pseudo||"S'ASSEOIR")+'</div><div class="sm">'+(s.mise?'€'+s.mise:(s.pseudo?'ICI':'·'))+(s.tot!=null && !s.estMoi?' · '+s.tot:'')+'</div>';
     if(!s.pseudo && (t.phase==='attente'||t.phase==='mises'||t.phase==='fin')){
       el.style.cursor='pointer';
       el.onclick=async()=>{try{ensureAudio(); await api('POST','/api/table/'+tableId+'/asseoir',{siege:s.index}); refreshTable();}catch(e){alert(e.message);}};
@@ -1158,7 +1191,8 @@ function renderTable(t){
     const amt=my.gainAffiche||0;
     banner.innerHTML='<div class="wb-t">'+(win?'YOU WIN':eq?'PUSH':'YOU LOSE')+'</div><div class="wb-a">'+(win||eq?'€'+amt:'—')+'</div>';
     document.body.appendChild(banner);
-    setTimeout(()=>{const b=document.getElementById('winBanner'); if(b) b.remove();},3500);
+    if(win) playWinSound();
+    setTimeout(()=>{const b=document.getElementById('winBanner'); if(b) b.remove();},1100);
   }
   const spot=$('betSpot');
   if(spot){
@@ -1183,6 +1217,7 @@ function renderTable(t){
     });
   }
   if(my && t.phase==='jeu' && t.tourSiege===my.index && my.statut==='en_jeu'){
+    if(my.main2) $('tableMsg').textContent=(my.jeuMain===2?'Main 2':'Main 1')+' — Tirer ou Rester';
     const btns=[['Tirer','tirer'],['Doubler','doubler']];
     if(my.peutSeparer) btns.push(['Séparer','separer']);
     btns.push(['Rester','rester',1]);
