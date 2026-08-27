@@ -13,7 +13,18 @@ function refillPlan(){
   else{for(let i=0;i<p;i++)plan.push('player');for(let i=0;i<rest;i++)plan.push('bank');}
   shuffle(plan);
 }
-function takeFavor(){if(mode==='aleatoire')return null;if(!plan.length)refillPlan();return plan.pop()||null;}
+let streak=[];
+function takeFavor(){
+  if(mode==='aleatoire')return null;
+  if(!plan.length)refillPlan();
+  let f=plan.pop()||null;
+  if(f&&streak.length>=2&&streak.slice(-2).every(x=>x===f)){
+    const o=f==='bank'?'player':'bank';
+    const i=plan.lastIndexOf(o);
+    if(i>=0){plan[i]=f;f=o;}else f=o;
+  }
+  return f;
+}
 function add(p,c,r,s){const x={id:id(),pseudo:p,code:c,role:r,solde:s};comptes.set(x.id,x);return x;}
 add('Patron','admin21','admin',999999);add('maelu','tuleccc','joueur',5000);
 function shoe(){const C=['♠','♥','♦','♣'],V=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];const a=[];for(let d=0;d<5;d++)for(const c of C)for(const v of V)a.push({v,c,id:id()});return shuffle(a);}
@@ -22,10 +33,25 @@ function tot(m){let t=0,a=0;for(const c of m||[]){t+=val(c);if(c.v==='A')a++;}wh
 function bj(m){return m&&m.length===2&&tot(m)===21;}
 function pair(m){const r=c=>['10','J','Q','K'].includes(c.v)?'10':c.v;return m&&m.length===2&&r(m[0])===r(m[1]);}
 const g={sabot:shoe(),dealer:[],player:[],split:null,which:0,bet:0,bet2:0,phase:'bet',msg:'Choisis une mise',result:'',uid:null,gain:0};
-function draw(forD,pTot){if(g.sabot.length<30)g.sabot=shoe();if(!g.favor)return g.sabot.pop();const want=g.favor==="bank";const sl=g.sabot.slice(-10);let pick;if(forD){const tc=tot(g.dealer);pick=sl.sort((a,b)=>want?(tc<17?val(b)-val(a):Math.abs(21-tc-val(a))-Math.abs(21-tc-val(b))):(tc>=12&&tc<=16?val(b)-val(a):val(a)-val(b)))[0];}else{const tj=pTot==null?tot(g.player):pTot;pick=sl.sort((a,b)=>want?(tj>=12&&tj<=16?val(b)-val(a):val(a)-val(b)):Math.abs(21-tj-val(a))-Math.abs(21-tj-val(b)))[0];}const i=g.sabot.lastIndexOf(pick);if(i>=0)g.sabot.splice(i,1);else return g.sabot.pop();return pick;}
+function draw(forD,pTot){
+  if(g.sabot.length<30)g.sabot=shoe();
+  if(!g.favor||Math.random()<0.45)return g.sabot.pop();
+  const bank=g.favor==='bank';
+  const sl=g.sabot.slice(-14);
+  const tgt=forD?(bank?18:17):(bank?16:18);
+  const now=forD?tot(g.dealer):(pTot==null?tot(g.player):pTot);
+  const score=c=>{
+    const n=now+ (c.v==='A'?(now+11<=21?11:1):val(c));
+    if(n>=20)return 30+n;
+    if(n>21)return bank===forD?80:4;
+    return Math.abs(n-tgt)+(n>19?2:0);
+  };
+  const pick=sl.slice().sort((a,b)=>score(a)-score(b))[Math.random()<0.5?0:Math.min(1,sl.length-1)];
+  const i=g.sabot.lastIndexOf(pick);if(i>=0)g.sabot.splice(i,1);else return g.sabot.pop();return pick;
+}
 function pub(moi){const hide=g.phase==='play'&&g.dealer[1];return{phase:g.phase,msg:g.msg,result:g.result,bet:g.bet,dealer:g.dealer.map((c,i)=>hide&&i===1?{v:'?',c:'?'}:c),dtot:hide?val(g.dealer[0]||{v:'0'}):(g.dealer.length?tot(g.dealer):null),player:g.player,ptot:g.player.length?tot(g.player):null,split:g.split,stot:g.split?tot(g.split):null,bet2:g.bet2,which:g.which,canSplit:(()=>{const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const h=hs[g.which]||hs[0];return g.phase==='play'&&pair(h&&h.cards)&&hs.length<2;})(),canDouble:g.phase==='play'&&((g.which===1&&g.split)?g.split.length===2:g.player.length===2)&&moi.solde>=((g.which===1&&g.split)?(g.bet2||g.bet):g.bet),hands:(g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[])).map(h=>({cards:h.cards,bet:h.bet,tot:tot(h.cards)})),gain:g.gain||0,solde:moi.solde,pseudo:moi.pseudo,role:moi.role};}
 function settle(hand,bet,c,splitHand){const pj=tot(hand),dj=tot(g.dealer);if(pj>21){g.gain-=bet;return'perdu';}if(!splitHand&&bj(hand)&&!bj(g.dealer)){const w=Math.floor(bet*1.5);c.solde+=bet+w;g.gain+=w;return'blackjack';}if(dj>21||pj>dj){c.solde+=bet*2;g.gain+=bet;return'gagne';}if(pj===dj){c.solde+=bet;return'egalite';}g.gain-=bet;return'perdu';}
-function finish(c){g.gain=0;const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const pOut=hs.every(h=>tot(h.cards)>21);if(!pOut){while(tot(g.dealer)<17)g.dealer.push(draw(true));}const ts=hs.map((h,i)=>settle(h.cards,h.bet,c,i>0||hs.length>1));g.phase='end';g.result=ts.join(' / ');g.msg=g.result.includes('gagne')||g.result.includes('blackjack')?'Gagné':g.result.includes('egalite')?'Égalité':'Perdu';}
+function finish(c){g.gain=0;const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const pOut=hs.every(h=>tot(h.cards)>21);if(!pOut){while(tot(g.dealer)<17)g.dealer.push(draw(true));}const ts=hs.map((h,i)=>settle(h.cards,h.bet,c,i>0||hs.length>1));g.phase='end';g.result=ts.join(' / ');g.msg=g.result.includes('gagne')||g.result.includes('blackjack')?'Gagné':g.result.includes('egalite')?'Égalité':'Perdu';if(g.result.includes('egalite')){}else if(g.result.includes('gagne')||g.result.includes('blackjack'))streak.push('player');else streak.push('bank');if(streak.length>8)streak=streak.slice(-8);}
 function me(req){const h=req.headers.authorization||'';const t=h.startsWith('Bearer ')?h.slice(7):null;return t&&sessions.has(t)?comptes.get(sessions.get(t)):null;}
 function read(req){return new Promise(r=>{let d='';req.on('data',x=>d+=x);req.on('end',()=>{try{r(JSON.parse(d||'{}'));}catch{r({});}});});}
 function json(res,s,o){res.writeHead(s,{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,POST,OPTIONS'});res.end(JSON.stringify(o));}
@@ -79,7 +105,7 @@ radial-gradient(ellipse at 50% 12%,#3a9a68 0%,#1a6b44 42%,#0c3a28 100%);}
 .hlab{font-size:.58rem;letter-spacing:.12em;text-align:center;opacity:.7;margin-bottom:.2rem}
 .lab{font-size:.65rem;letter-spacing:.18em;opacity:.7;color:#f0d9a0}
 .hand{display:flex;gap:0;min-height:88px}
-.card{width:66px;height:96px;margin-right:-16px;border-radius:9px;background:linear-gradient(#fffef8,#f3ead6);color:#1a1208;position:relative;box-shadow:0 10px 18px #0006,0 0 0 1px #d9c9a4;animation:deal .18s ease-out;flex-shrink:0}
+.card{width:66px;height:96px;margin-right:-16px;border-radius:7px;background:linear-gradient(#fffef6,#f4ead4 55%,#e8dcc0);color:#1a1208;position:relative;box-shadow:0 10px 16px #0007,0 1px 0 #fff8 inset,0 0 0 1px #cbb896;animation:deal .22s ease-out;flex-shrink:0}
 .card .c1,.card .c2{position:absolute;width:18px;text-align:center;font-family:Georgia,'Times New Roman',serif;font-weight:800;line-height:1.05;font-size:.78rem}
 .card .c1{top:5px;left:4px}.card .c2{bottom:5px;right:4px;transform:rotate(180deg)}
 .card .pip{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);font-size:1.35rem;font-family:Georgia,serif}
@@ -177,8 +203,11 @@ function show(i){document.querySelectorAll('.v').forEach(x=>x.classList.remove('
 async function api(p,b){const o={method:b?'POST':'GET',headers:{'Content-Type':'application/json'}};if(token)o.headers.Authorization='Bearer '+token;if(b)o.body=JSON.stringify(b);const r=await fetch(p,o);const d=await r.json();if(r.status===401){token=null;localStorage.removeItem('bj.t');show('login');throw new Error('Session');}if(!r.ok)throw new Error(d.err||'Erreur');return d;}
 let seated=false, dealing=false, lastBet=0, autoT=null, actx=null;
 function beep(f,ms){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.07,t);g.gain.exponentialRampToValueAtTime(.001,t+(ms||.12));o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+(ms||.14));}catch(e){}}
-function noise(ms,freq){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();const n=actx.createBuffer(1,Math.floor(actx.sampleRate*(ms||.05)),actx.sampleRate);const d=n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(d.length*.28));const s=actx.createBufferSource();s.buffer=n;const f=actx.createBiquadFilter();f.type='bandpass';f.frequency.value=freq||1600;const g=actx.createGain();g.gain.value=.2;s.connect(f);f.connect(g);g.connect(actx.destination);s.start();}catch(e){beep(320,.05);}}
-function sndCard(){noise(.05,1700);}function sndChip(){beep(190,.06);setTimeout(()=>beep(240,.05),40);}function sndWin(){beep(880,.07);setTimeout(()=>beep(1175,.08),70);setTimeout(()=>beep(1568,.12),140);}function sndLose(){beep(180,.14);setTimeout(()=>beep(120,.18),90);}
+function noise(ms,freq,type,vol){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();const n=actx.createBuffer(1,Math.max(1,Math.floor(actx.sampleRate*(ms||.06))),actx.sampleRate);const d=n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(d.length*.22));const s=actx.createBufferSource();s.buffer=n;const f=actx.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq||1400;f.Q.value=0.8;const g=actx.createGain();g.gain.value=vol||.22;s.connect(f);f.connect(g);g.connect(actx.destination);s.start();}catch(e){}}
+function sndCard(){noise(.07,900,'highpass',.16);setTimeout(()=>noise(.03,2200,'bandpass',.2),18);}
+function sndChip(){noise(.04,700,'lowpass',.18);setTimeout(()=>beep(210,.04),25);}
+function sndWin(){noise(.05,1800,'bandpass',.12);beep(980,.06);setTimeout(()=>beep(1320,.08),80);setTimeout(()=>beep(1760,.1),160);}
+function sndLose(){noise(.08,400,'lowpass',.12);beep(160,.14);}
 const PIPS={A:[5],'2':[2,8],'3':[2,5,8],'4':[1,3,7,9],'5':[1,3,5,7,9],'6':[1,3,4,6,7,9],'7':[1,3,4,5,6,7,9],'8':[1,3,4,5,6,7,8,9],'9':[1,2,3,4,6,7,8,9],'10':[1,2,3,4,5,6,7,8,9]};
 function svgChip(v,col){const dash=[];for(let i=0;i<16;i++){const a=i*22.5;dash.push('<path d="M38 4 A34 34 0 0 1 38 4" stroke="none"/>');}
 return '<svg viewBox="0 0 76 76" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="g'+v+'" cx="35%" cy="30%"><stop offset="0%" stop-color="#fff6"/><stop offset="55%" stop-color="'+col+'"/><stop offset="100%" stop-color="#0006"/></radialGradient></defs><circle cx="38" cy="38" r="36" fill="#e8c76a"/><circle cx="38" cy="38" r="33" fill="'+col+'"/><g stroke="#fff" stroke-width="6" fill="none">'+Array.from({length:16},(_,i)=>{const a=i*22.5*Math.PI/180;const x1=38+Math.cos(a)*30,y1=38+Math.sin(a)*30,x2=38+Math.cos(a)*36,y2=38+Math.sin(a)*36;return '<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'"/>';}).join('')+'</g><circle cx="38" cy="38" r="24" fill="url(#g'+v+')"/><g stroke="#f1d48a" stroke-width=".6" opacity=".45">'+Array.from({length:16},(_,i)=>{const a=i*22.5*Math.PI/180;return '<line x1="38" y1="38" x2="'+(38+Math.cos(a)*23).toFixed(1)+'" y2="'+(38+Math.sin(a)*23).toFixed(1)+'"/>';}).join('')+'</g><path d="M28 28 L31 22 L34 28 L38 22 L42 28 L45 22 L48 28 L46 31 L30 31 Z" fill="#f3e2a6"/><text x="38" y="50" text-anchor="middle" font-size="16" font-weight="800" fill="#fff" font-family="Georgia,serif">'+v+'</text></svg>';}
