@@ -76,6 +76,7 @@ button{border:0;border-radius:8px;padding:.7rem 1rem;font-weight:700}
 <div id="login" class="v on"><div>
 <div style="width:70px;height:70px;border:2px solid #c9a227;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;color:#c9a227;font-size:1.4rem">21</div>
 <h1>BLACKJACK</h1>
+<p style="opacity:.5;font-size:.7rem;letter-spacing:.18em;margin:-.6rem 0 .8rem">V4 · JETON PUIS JOUER</p>
 <input id="ps" placeholder="Pseudo"><input id="cd" type="password" placeholder="Code">
 <button class="g" id="go" style="width:100%;max-width:320px;margin-top:.5rem">Entrer</button>
 <p class="err" id="er"></p></div></div>
@@ -87,7 +88,7 @@ button{border:0;border-radius:8px;padding:.7rem 1rem;font-weight:700}
 <div class="hand" id="ph"></div><div class="tot" id="pt"></div><div id="sh"></div>
 <div class="seat" id="seat">S'ASSEOIR</div>
 </div>
-<div class="dock"><div class="chips" id="chips"></div><div class="acts" id="acts"></div></div></div>
+<div class="dock"><div style="text-align:center;font-size:.68rem;letter-spacing:.12em;opacity:.7;margin-bottom:.35rem">1. JETON &nbsp; 2. JOUER / REJOUER</div><div class="chips" id="chips"></div><div class="acts" id="acts"></div></div></div>
 <div id="admin" class="v"><div class="bar"><b>Régie</b><button class="g" id="back">Retour</button></div>
 <div id="modes"></div><h2>Nouveau compte</h2>
 <div class="row"><input id="np" placeholder="Pseudo"><input id="nc" placeholder="Code"><input id="ns" type="number" value="2000"><button class="g" id="ncBtn">Créer</button></div>
@@ -125,8 +126,9 @@ function ui(s,skipDeal){
   if(s.phase==='end'&&s.result==='perdu') banner('YOU LOSE',0);
   if((s.phase==='bet'||s.phase==='end')&&seated){
     [10,25,50,100].forEach(v=>{const b=document.createElement('button');b.className='chip c'+v+(lastBet===v?' sel':'');b.textContent=v;b.onclick=()=>{lastBet=v;$('chipon').textContent=v;ui(s);};chips.appendChild(b);});
-    const go=document.createElement('button');go.className='p';go.textContent=s.phase==='end'?'Rejouer':'Jouer';
-    go.onclick=()=>{if(!lastBet){alert('Pose d abord un jeton');return;}playBet(lastBet);};
+    const go=document.createElement('button');go.className='p';go.style.minWidth='160px';go.style.fontSize='1rem';
+    go.textContent=s.phase==='end'?'REJOUER':'JOUER';
+    go.onclick=()=>{if(!lastBet){alert('Tape d abord un jeton (10 25 50 100)');return;}playBet(lastBet);};
     acts.appendChild(go);
   }
   if(s.phase==='play'&&!dealing){[['Tirer','hit'],['Doubler','double'],['Rester','stand']].forEach(([l,a],i)=>{const b=document.createElement('button');if(i===2)b.className='p';b.textContent=l;b.onclick=async()=>{try{const ns=await api('/api/action',{action:a});ui(ns);}catch(e){alert(e.message);}};acts.appendChild(b);});
