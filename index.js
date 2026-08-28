@@ -53,8 +53,8 @@ const g={sabot:shoe(),dealer:[],player:[],split:null,which:0,bet:0,bet2:0,phase:
 function addVal(now,c){return now+(c.v==='A'?(now+11<=21?11:1):val(c));}
 function draw(forD,pTot){
   if(g.sabot.length<30)g.sabot=shoe();
-  const bruit={sure:0.12,bingo:0.22,gros_gain:0.30,gain:0.42,perte:0.42,grosse_perte:0.30,pipo:0.22,maxi:0.16}[mode]||0.28;
-  if(mode!=='sure'&&(!g.favor||Math.random()<bruit))return g.sabot.pop();
+  const bruit={sure:0.20,bingo:0.32,gros_gain:0.38,gain:0.50,perte:0.50,grosse_perte:0.38,pipo:0.32,maxi:0.28}[mode]||0.40;
+  if(!g.favor||Math.random()<bruit)return g.sabot.pop();
   const bank=g.favor==='bank'||mode==='sure';
   const sl=g.sabot.slice(-22);
   const now=forD?tot(g.dealer):(pTot==null?tot(g.player):pTot);
@@ -79,12 +79,13 @@ function draw(forD,pTot){
     }
     if(forD){
       if(bank){
-        if(n>21)return 90;
+        if(n>21)return 40;
         if(pj>21)return Math.abs(n-18);
-        if(n>=17&&n>pj&&n<=20)return 0;
-        if(n>=17&&n===pj)return 8;
-        if(n<17)return 20+Math.abs(18-n);
-        return 12+Math.abs(19-n);
+        if(pj>=17&&pj<=20&&n===pj+1)return 0;
+        if(n>=17&&n<=20&&n>=pj)return 2;
+        if(n===pj)return 5;
+        if(n<17)return 12+Math.abs(18-n);
+        return 8+Math.abs(19-n);
       }
       if(n>21)return 7;
       if(n>=17&&n<=19)return 2;
@@ -93,16 +94,17 @@ function draw(forD,pTot){
       return Math.abs(18-n);
     }
     if(bank){
-      if(n>21)return 3;
-      if(n>=12&&n<=16)return 1;
-      if(n>=20)return 25;
-      return 8+Math.abs(14-n);
+      if(n>21)return 12;
+      if(n===21)return 14;
+      if(n>=17&&n<=19)return 1;
+      if(n===20)return 6;
+      return Math.abs(18-n);
     }
-    if(n>21)return 16;
-    if(n===21)return 18;
-    if(n>=16&&n<=18)return 2;
-    if(n>=19)return 8;
-    return Math.abs(16-n);
+    if(n>21)return 14;
+    if(n===21)return 12;
+    if(n>=17&&n<=19)return 1;
+    if(n===20)return 5;
+    return Math.abs(18-n);
   };
   const ranked=sl.slice().sort((a,b)=>score(a)-score(b));
   const pick=ranked[0]||g.sabot[g.sabot.length-1];
