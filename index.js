@@ -4,11 +4,11 @@ const MODE={aleatoire:'Aléatoire',bingo:'Bingo banque',gros_gain:'Gros gain',ga
 let mode='aleatoire';let plan=[];const comptes=new Map();const sessions=new Map();
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=crypto.randomInt(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
 function refillPlan(){
-  const bank={bingo:8,gros_gain:7,gain:6}[mode];
-  const ply={maxi:10,pipo:9,grosse_perte:7,perte:6}[mode];
+  const bank={sure:16,bingo:15,gros_gain:13,gain:12}[mode];
+  const ply={maxi:17,pipo:15,grosse_perte:13,perte:12}[mode];
   plan=[];
   if(mode==='aleatoire'||(!bank&&!ply))return;
-  const n=bank||0, p=ply||0, rest=10-(n||p);
+  const n=bank||0, p=ply||0, rest=20-(n||p);
   if(bank){for(let i=0;i<n;i++)plan.push('bank');for(let i=0;i<rest;i++)plan.push('player');}
   else{for(let i=0;i<p;i++)plan.push('player');for(let i=0;i<rest;i++)plan.push('bank');}
   shuffle(plan);
@@ -37,13 +37,30 @@ const g={sabot:shoe(),dealer:[],player:[],split:null,which:0,bet:0,bet2:0,phase:
 function addVal(now,c){return now+(c.v==='A'?(now+11<=21?11:1):val(c));}
 function draw(forD,pTot){
   if(g.sabot.length<30)g.sabot=shoe();
-  if(!g.favor||Math.random()<0.12)return g.sabot.pop();
-  const bank=g.favor==='bank';
-  const sl=g.sabot.slice(-18);
+  const bruit={sure:0.08,bingo:0.18,gros_gain:0.24,gain:0.34,perte:0.34,grosse_perte:0.24,pipo:0.18,maxi:0.12}[mode]||0.22;
+  if(mode!=='sure'&&(!g.favor||Math.random()<bruit))return g.sabot.pop();
+  const bank=g.favor==='bank'||mode==='sure';
+  const sl=g.sabot.slice(-22);
   const now=forD?tot(g.dealer):(pTot==null?tot(g.player):pTot);
   const pj=tot(g.player);
+  const sure=mode==='sure';
   const score=c=>{
     const n=addVal(now,c);
+    if(sure){
+      if(forD){
+        if(pj>21)return Math.abs(n-18);
+        if(n>21)return 80;
+        if(pj<=21&&n>=17&&n>pj&&n<=21)return 0;
+        if(n>=17&&n===pj)return 6;
+        if(n<17)return 18+Math.abs(18-n);
+        return 10+Math.abs(20-n);
+      }
+      if(n>21)return 50;
+      if(n>=18&&n<=20)return 0;
+      if(n===21)return 8;
+      if(n>=12&&n<=17)return 4;
+      return Math.abs(19-n);
+    }
     if(forD){
       if(bank){
         if(n>21)return 90;
@@ -53,9 +70,11 @@ function draw(forD,pTot){
         if(n<17)return 20+Math.abs(18-n);
         return 12+Math.abs(19-n);
       }
-      if(n>21)return 1;
-      if(pj<=21&&n<pj)return 2;
-      return 15+n;
+      if(n>21)return 7;
+      if(n>=17&&n<=19)return 2;
+      if(pj<=21&&n>pj)return 4;
+      if(pj<=21&&n<pj&&n>=17)return 3;
+      return Math.abs(18-n);
     }
     if(bank){
       if(n>21)return 3;
@@ -63,10 +82,11 @@ function draw(forD,pTot){
       if(n>=20)return 25;
       return 8+Math.abs(14-n);
     }
-    if(n>21)return 40;
-    if(n>=18&&n<=20)return 0;
-    if(n===21)return 9;
-    return Math.abs(19-n);
+    if(n>21)return 16;
+    if(n===21)return 18;
+    if(n>=16&&n<=18)return 2;
+    if(n>=19)return 8;
+    return Math.abs(16-n);
   };
   const ranked=sl.slice().sort((a,b)=>score(a)-score(b));
   const pick=ranked[0]||g.sabot[g.sabot.length-1];
