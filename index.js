@@ -342,7 +342,8 @@ border:2px solid #f0d78a;color:transparent}
 </div></div>
 <div id="lobby" class="v"><div class="bar"><b>SALONS</b><span><button class="g" id="admBtn2" style="display:none;padding:.35rem .6rem">Admin</button> <button id="out3" style="background:#333;color:#fff;padding:.35rem .6rem">Déconnexion</button></span></div>
 <div style="padding:1rem;max-width:420px;margin:0 auto;width:100%">
-<p style="letter-spacing:.2em;text-align:center;color:#e8d48b;margin:.4rem 0 1rem">CHOISIS UNE TABLE</p>
+<p style="letter-spacing:.18em;text-align:center;color:#e8d48b;margin:.4rem 0 .25rem">CHOISIS UNE TABLE</p>
+<p style="text-align:center;font-size:.62rem;letter-spacing:.12em;color:#c9a22799;margin:0 0 1rem">Bonus pas payé</p>
 <div id="roomGrid"></div>
 </div></div>
 <div id="game" class="v">
