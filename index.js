@@ -105,15 +105,16 @@ radial-gradient(ellipse at 50% 8%,#1f5c3a 0%,#0f3d28 55%,#0a2a1c 100%);border-ra
 .col.on{outline:2px solid #e8d48b;background:#0003}
 .hlab{font-size:.58rem;letter-spacing:.12em;text-align:center;opacity:.7;margin-bottom:.2rem}
 .lab{font-size:.65rem;letter-spacing:.18em;opacity:.7;color:#f0d9a0}
-.hand{display:flex;gap:0;min-height:88px}
-.card{width:66px;height:96px;margin-right:-16px;border-radius:7px;background:linear-gradient(#fffef6,#f4ead4 55%,#e8dcc0);color:#1a1208;position:relative;box-shadow:0 10px 16px #0007,0 1px 0 #fff8 inset,0 0 0 1px #cbb896;animation:deal .22s ease-out;flex-shrink:0}
+.hand{display:flex;gap:0;min-height:88px;perspective:500px}
+.card{width:66px;height:96px;margin-right:-16px;border-radius:7px;background:linear-gradient(#fffef6,#f4ead4 55%,#e8dcc0);color:#1a1208;position:relative;box-shadow:0 10px 16px #0007,0 1px 0 #fff8 inset,0 0 0 1px #cbb896;animation:deal .42s cubic-bezier(.2,.7,.2,1);flex-shrink:0}
 .card .c1,.card .c2{position:absolute;width:18px;text-align:center;font-family:Georgia,'Times New Roman',serif;font-weight:800;line-height:1.05;font-size:.78rem}
 .card .c1{top:5px;left:4px}.card .c2{bottom:5px;right:4px;transform:rotate(180deg)}
 .card .pip{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);font-size:1.35rem;font-family:Georgia,serif}
 .pips{position:absolute;left:16px;right:16px;top:16px;bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:repeat(3,1fr);place-items:center;font-size:.95rem}
-.card.r{color:#c41e3a}
+.card.flip{animation:flip .38s ease-out}.card.r{color:#c41e3a}
 .card.x{background:repeating-linear-gradient(45deg,#6e1522 0 7px,#8b1e2d 7px 14px);color:transparent;border:2px solid #fff}
-@keyframes deal{from{transform:translate(-40px,-18px) rotate(-8deg);opacity:.4}to{transform:none;opacity:1}}
+@keyframes deal{from{transform:translate(70px,-80px) rotate(16deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes flip{from{transform:rotateY(90deg) scale(.92)}to{transform:none}}
 .acts button,.chip{transition:transform .18s ease,box-shadow .18s ease,opacity .18s}
 .acts button:active,.chip:active{transform:scale(.94)}
 .tot{background:#0006;padding:.15rem .5rem;border-radius:99px;font-size:.8rem}
@@ -234,7 +235,7 @@ async function dealSeq(s){
   const D=s.dealer||[],P=s.player||[];
   const seq=[{w:'ph',c:P[0]},{w:'ph',c:P[1]},{w:'dh',c:D[0]},{w:'dh',c:D[1]}].filter(x=>x.c);
   const seenD=[],seenP=[];
-  for(const step of seq){await new Promise(r=>setTimeout(r,280));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
+  for(const step of seq){await new Promise(r=>setTimeout(r,420));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
     if(step.w==='ph'){seenP.push(step.c);if($('pt'))$('pt').textContent=totC(seenP);}
     else{seenD.push(step.c);$('dt').textContent=totC(seenD.filter(c=>c&&c.v!=='?'));}
   }
@@ -247,14 +248,14 @@ async function revealDealer(s){
   const kids=[...box.children];
   const shown=[D[0]].filter(Boolean);
   if(D[1]){
-    if(kids[1]){kids[1].replaceWith(C(D[1]));sndCard();}
-    else {box.appendChild(C(D[1]));sndCard();}
+    const nd=C(D[1]);nd.classList.add('flip');
+    if(kids[1])kids[1].replaceWith(nd);else box.appendChild(nd);sndCard();
     shown.push(D[1]);$('dt').textContent=totC(shown);
-    await new Promise(r=>setTimeout(r,170));
+    await new Promise(r=>setTimeout(r,340));
   }
   for(let i=2;i<D.length;i++){
     if(box.children[i]) continue;
-    await new Promise(r=>setTimeout(r,170));
+    await new Promise(r=>setTimeout(r,320));
     sndCard();box.appendChild(C(D[i]));shown.push(D[i]);$('dt').textContent=totC(shown);
   }
   $('dt').textContent=s.dtot!=null?s.dtot:totC(D);
