@@ -304,6 +304,17 @@ border:2px solid #f0d78a;color:transparent}
 .hud.on{display:block}
 .spy{display:none;position:fixed;right:6px;top:42%;z-index:40;width:28px;height:56px;border-radius:8px 0 0 8px;background:#1a1208cc;border:1px solid #c9a22744;color:#c9a22799;font-size:.62rem;letter-spacing:.06em;writing-mode:vertical-rl;text-align:center;padding:.25rem 0}
 .spy.on{display:block}
+.rules{display:none;position:fixed;inset:0;z-index:50;background:#0b100ef5;color:#e8e0d4;padding:1.1rem .9rem 2rem;overflow:auto;font-family:Georgia,serif}
+.rules.on{display:block}
+.rules h3{letter-spacing:.2em;font-weight:500;font-size:.82rem;color:#d4c48a;margin:0 0 1rem}
+.rules .rx{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-bottom:1px solid #c9a22722}
+.rules .rx b{font-weight:500}
+.rules .rx small{display:block;color:#9a9080;font-size:.68rem;margin-top:.15rem}
+.seg{display:flex;border:1px solid #c9a22755;border-radius:6px;overflow:hidden}
+.seg i{padding:.28rem .55rem;font-style:normal;font-size:.72rem;cursor:pointer}
+.seg i.on{background:#c9a227;color:#1a1208}
+.rq{color:#c9a227}
+.ql{width:100%;margin-top:1.1rem;padding:.75rem;background:transparent;border:1px solid #8a3030;color:#e07070;border-radius:8px}
 .spyp{display:none;position:fixed;right:8px;top:12%;bottom:18%;width:72%;max-width:320px;z-index:41;background:#0b0b0ef2;border:1px solid #c9a22755;border-radius:12px;padding:.7rem;overflow:auto;font-size:.72rem}
 .spyp.on{display:block}
 .spyp b.ttl{color:#e8d48b;letter-spacing:.12em}
@@ -356,6 +367,23 @@ border:2px solid #f0d78a;color:transparent}
 </div>
 <div class="hud" id="hud"><div id="hudTxt">Live…</div></div>
 <div class="dock"><div class="chips" id="chips"></div><div class="acts" id="acts"></div></div></div>
+<div class="rules" id="rules">
+<div style="display:flex;justify-content:space-between;align-items:center"><h3>RÈGLES DE LA TABLE</h3><button id="rulesX" style="background:transparent;color:#e8d48b">✕</button></div>
+<div class="rx"><div><b>Sons de table</b><small>Cartes, jetons, paiements</small></div><div class="seg" id="sgSnd"><i data-v="1">Oui</i><i data-v="0">Non</i></div></div>
+<div class="rx"><div><b>Rythme de la donne</b><small>Rapide raccourcit les animations</small></div><div class="seg" id="sgSpd"><i data-v="pose">Posé</i><i data-v="rapide">Rapide</i></div></div>
+<div class="rx"><div><b>Ambiance de salle</b><small>Fond discret</small></div><div class="seg" id="sgAmb"><i data-v="off">Non</i><i data-v="low">Discrète</i></div></div>
+<p style="letter-spacing:.18em;color:#d4c48a;margin:1.1rem 0 .3rem;font-size:.72rem">LA TABLE</p>
+<div class="rx"><span>Jeux dans le sabot</span><b class="rq">5</b></div>
+<div class="rx"><span>Le 17 souple</span><b class="rq">La banque reste</b></div>
+<div class="rx"><span>Le blackjack paie</span><b class="rq">3 pour 2</b></div>
+<div class="rx"><span>Assurance sur As</span><b class="rq">Oui</b></div>
+<div class="rx"><span>Doubler après séparation</span><b class="rq">Oui</b></div>
+<div class="rx"><span>Abandon tardif</span><b class="rq">Non</b></div>
+<div class="rx"><span>Re-séparer les as</span><b class="rq">Non</b></div>
+<div class="rx"><span>Mise minimum</span><b class="rq">5 jetons</b></div>
+<div class="rx"><span>Mise maximum</span><b class="rq">50 jetons</b></div>
+<button class="ql" id="quitRules">Quitter la table</button>
+</div>
 <button class="spy" id="spyBtn">GIO</button>
 <div class="spyp" id="spyBox"><b class="ttl">ACTIONS GIO</b><div id="spyList" style="margin-top:.5rem"></div></div>
 <div id="admin" class="v"><div class="bar"><b>Régie</b><button class="g" id="back">Retour</button></div>
@@ -370,12 +398,17 @@ const $=i=>document.getElementById(i);let token=localStorage.getItem('bj.t'),moi
 function show(i){document.querySelectorAll('.v').forEach(x=>x.classList.remove('on'));$(i).classList.add('on');}
 async function api(p,b){const o={method:b?'POST':'GET',headers:{'Content-Type':'application/json'}};if(token)o.headers.Authorization='Bearer '+token;if(b)o.body=JSON.stringify(b);const r=await fetch(p,o);const d=await r.json();if(r.status===401){token=null;localStorage.removeItem('bj.t');show('login');throw new Error('Session');}if(!r.ok)throw new Error(d.err||'Erreur');return d;}
 let seated=false, dealing=false, lastBet=0, autoT=null, actx=null, roomNo=0;
+let pref={snd:1,spd:'pose',amb:'off'};
+try{Object.assign(pref,JSON.parse(localStorage.getItem('bj.pref')||'{}'));}catch(e){}
+function savePref(){localStorage.setItem('bj.pref',JSON.stringify(pref));}
 function beep(f,ms){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.07,t);g.gain.exponentialRampToValueAtTime(.001,t+(ms||.12));o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+(ms||.14));}catch(e){}}
 function noise(ms,freq,type,vol){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();const n=actx.createBuffer(1,Math.max(1,Math.floor(actx.sampleRate*(ms||.06))),actx.sampleRate);const d=n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(d.length*.22));const s=actx.createBufferSource();s.buffer=n;const f=actx.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq||1400;f.Q.value=0.8;const g=actx.createGain();g.gain.value=vol||.22;s.connect(f);f.connect(g);g.connect(actx.destination);s.start();}catch(e){}}
-function sndCard(){noise(.07,900,'highpass',.16);setTimeout(()=>noise(.03,2200,'bandpass',.2),18);}
-function sndChip(){noise(.04,700,'lowpass',.18);setTimeout(()=>beep(210,.04),25);}
-function sndWin(){noise(.05,1800,'bandpass',.12);beep(980,.06);setTimeout(()=>beep(1320,.08),80);setTimeout(()=>beep(1760,.1),160);}
-function sndLose(){noise(.08,400,'lowpass',.12);beep(160,.14);}
+function sndCard(){if(!pref.snd)return;noise(.09,780,'highpass',.22);setTimeout(()=>noise(.05,2400,'bandpass',.18),22);setTimeout(()=>noise(.03,1600,'highpass',.1),55);}
+function sndChip(){if(!pref.snd)return;noise(.05,420,'lowpass',.28);setTimeout(()=>noise(.03,900,'bandpass',.16),20);setTimeout(()=>beep(180,.05),30);}
+function sndWin(){if(!pref.snd)return;noise(.06,2000,'bandpass',.14);[880,1174,1568,2093].forEach((f,i)=>setTimeout(()=>{beep(f,.09);noise(.04,1800,'highpass',.08);},i*95));}
+function sndLose(){if(!pref.snd)return;noise(.1,320,'lowpass',.16);beep(140,.16);}
+let ambN=null;
+function setAmb(v){pref.amb=v;savePref();try{if(ambN){ambN.stop();ambN=null;}if(v==='off'||!pref.snd)return;if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();const n=actx.createBuffer(1,actx.sampleRate*2,actx.sampleRate);const d=n.getChannelData(0);let last=0;for(let i=0;i<d.length;i++){last=(last+0.02*Math.random()*2-0.02)*.98;d[i]=last;}const s=actx.createBufferSource();s.buffer=n;s.loop=true;const g=actx.createGain();g.gain.value=.03;s.connect(g);g.connect(actx.destination);s.start();ambN=s;}catch(e){}}
 const PIPS={A:[5],'2':[2,8],'3':[2,5,8],'4':[1,3,7,9],'5':[1,3,5,7,9],'6':[1,3,4,6,7,9],'7':[1,3,4,5,6,7,9],'8':[1,3,4,5,6,7,8,9],'9':[1,2,3,4,6,7,8,9],'10':[1,2,3,4,5,6,7,8,9]};
 function svgChip(v,col){
   const spots=Array.from({length:8},(_,i)=>{const a=(i*45-11)*Math.PI/180,b=(i*45+11)*Math.PI/180;const r=35;const x1=38+Math.cos(a)*r,y1=38+Math.sin(a)*r,x2=38+Math.cos(b)*r,y2=38+Math.sin(b)*r;return '<path d="M38 38 L'+x1.toFixed(1)+' '+y1.toFixed(1)+' A'+r+' '+r+' 0 0 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+' Z" fill="'+(col||'#7a1f2b')+'"/>';}).join('');
@@ -405,7 +438,7 @@ async function dealSeq(s){
   const D=s.dealer||[],P=s.player||[];
   const seq=[{w:'ph',c:P[0]},{w:'dh',c:D[0]},{w:'ph',c:P[1]},{w:'dh',c:D[1]}].filter(x=>x.c);
   const seenD=[],seenP=[];
-  for(const step of seq){await new Promise(r=>setTimeout(r,420));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
+  for(const step of seq){await new Promise(r=>setTimeout(r,pref.spd==='rapide'?200:460));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
     if(step.w==='ph'){seenP.push(step.c);if($('pt'))$('pt').textContent=totC(seenP);}
     else{seenD.push(step.c);$('dt').textContent=totC(seenD.filter(c=>c&&c.v!=='?'));}
   }
@@ -503,7 +536,17 @@ function ui(s,skipDeal){
 function render(s){ui(s);}
 
 
-$('gear').onclick=()=>{const b=document.querySelector('#game .bar');if(b)b.style.display=b.style.display==='flex'?'none':'flex';};
+function paintPref(){
+  document.querySelectorAll('#sgSnd i').forEach(x=>x.classList.toggle('on',String(pref.snd)===x.dataset.v));
+  document.querySelectorAll('#sgSpd i').forEach(x=>x.classList.toggle('on',pref.spd===x.dataset.v));
+  document.querySelectorAll('#sgAmb i').forEach(x=>x.classList.toggle('on',pref.amb===x.dataset.v));
+}
+$('gear').onclick=()=>{paintPref();$('rules').classList.add('on');};
+$('rulesX')&&($('rulesX').onclick=()=>$('rules').classList.remove('on'));
+$('quitRules')&&($('quitRules').onclick=()=>{$('rules').classList.remove('on');$('leave').click();});
+document.querySelectorAll('#sgSnd i').forEach(x=>x.onclick=()=>{pref.snd=+x.dataset.v;savePref();paintPref();if(!pref.snd&&ambN){try{ambN.stop();}catch(e){}ambN=null;}});
+document.querySelectorAll('#sgSpd i').forEach(x=>x.onclick=()=>{pref.spd=x.dataset.v;savePref();paintPref();});
+document.querySelectorAll('#sgAmb i').forEach(x=>x.onclick=()=>setAmb(x.dataset.v));
 let liveT=null,syncT=null,lastSig='';
 function startSync(){
   if(syncT)clearInterval(syncT);
