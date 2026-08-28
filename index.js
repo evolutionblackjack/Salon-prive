@@ -228,8 +228,11 @@ border:2px solid #f0d78a;color:transparent}
 <div id="login" class="v on"><div>
 <div style="width:70px;height:70px;border:2px solid #c9a227;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;color:#c9a227;font-size:1.4rem">21</div>
 <h1>BLACKJACK</h1>
-<input id="ps" placeholder="Pseudo"><input id="cd" type="password" placeholder="Code">
-<button class="g" id="go" style="width:100%;max-width:320px;margin-top:.5rem">Entrer</button>
+<form id="logf" method="post" action="." autocomplete="on">
+<input id="ps" name="username" placeholder="Pseudo" autocomplete="username" autocapitalize="off">
+<input id="cd" name="password" type="password" placeholder="Code" autocomplete="current-password">
+<button class="g" id="go" type="submit" style="width:100%;max-width:320px;margin-top:.5rem">Entrer</button>
+</form>
 <p class="err" id="er"></p>
 <p class="note">Sabot mélangé par <b>Fisher–Yates</b> alimenté par <b>crypto.getRandomValues</b>, remélangé au passage de la carte de coupe. Aucune carte n'est choisie en fonction de la main en cours : l'avantage vient uniquement des règles ci-dessus.</p>
 </div></div>
@@ -407,14 +410,7 @@ function startSync(){
       if($('railSolde'))$('railSolde').textContent=s.solde;
       if($('railMise'))$('railMise').textContent=s.bet||0;
       if($('solde'))$('solde').textContent='€'+s.solde;
-      if($('msg'))$('msg').textContent=s.msg||'';
-      paintHands(s);
-      const dh=$('dh');
-      if(dh&&!dealing){
-        syncHand(dh,s.dealer||[]);
-        if($('dt'))$('dt').textContent=s.dtot!=null?s.dtot:'';
-      }
-      if(s.phase==='bet'||s.phase==='end'||s.phase==='play')ui(s,'keep');
+      if($('solde'))$('solde').textContent='€'+s.solde;
     }catch(e){}
   },450);
 }
@@ -458,7 +454,8 @@ async function refreshLive(){
     }
   }catch(e){}
 }
-$('go').onclick=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));startSync();if(moi.role==='admin') startHud();}catch(e){$('er').textContent=e.message;}};
+const doLogin=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));startSync();if(moi.role==='admin') startHud();}catch(e){$('er').textContent=e.message;}};
+if($('logf'))$('logf').onsubmit=e=>{e.preventDefault();doLogin();};$('go').onclick=doLogin;
 $('leave').onclick=async()=>{try{await api('/api/quitter',{});}catch(e){}seated=false;lastBet=0;if(autoT)clearTimeout(autoT);$('dh').innerHTML='';if($('handsRow'))$('handsRow').innerHTML='';$('dt').textContent='';$('msg').textContent='';if($('chipon'))$('chipon').innerHTML='';$('acts').innerHTML='';$('chips').innerHTML='';api('/api/etat').then(render);};
 $('seat').onclick=()=>{seated=true;idleAt=Date.now();api('/api/etat').then(render);};
 let idleAt=Date.now();
