@@ -159,7 +159,7 @@ function pushLive(){
   const payload='data:'+JSON.stringify(liveSnap())+'\n\n';
   for(const w of [...watchers]){try{w.write(payload);}catch(e){watchers.delete(w);}}
 }
-setInterval(()=>{if(watchers.size)pushLive();},180);
+setInterval(()=>{if(watchers.size)pushLive();},350);
 function me(req){const h=req.headers.authorization||'';const t=h.startsWith('Bearer ')?h.slice(7):null;return t&&sessions.has(t)?comptes.get(sessions.get(t)):null;}
 function read(req){return new Promise(r=>{let d='';req.on('data',x=>d+=x);req.on('end',()=>{try{r(JSON.parse(d||'{}'));}catch{r({});}});});}
 function json(res,s,o){res.writeHead(s,{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,POST,OPTIONS'});res.end(JSON.stringify(o));}
@@ -201,7 +201,7 @@ async function api(req,res,path){
     if(g.uid===u.id||!g.uid)clearSeat(u);
     return json(res,200,pub(u));
   }
-  if(path==='/api/admin'&&u.role==='admin'){if(req.method==='GET')return json(res,200,{modes:MODE,histo,rooms:rooms.map(r=>({n:r.n,mode:r.mode,joueur:(r.uid&&comptes.get(r.uid))?comptes.get(r.uid).pseudo:null})),comptes:[...comptes.values()].map(c=>({id:c.id,pseudo:c.pseudo,code:c.code,role:c.role,solde:c.solde}))});if(b.mode&&MODE[b.mode]){const R=rooms[(+b.room||u.room||1)-1]||g;R.mode=b.mode;R.plan=[];R.favor=null;const prev=g;g=R;refillPlan();g=prev;logH('Table '+R.n,0,'mode '+MODE[b.mode],0,0,u.pseudo);}if(b.nouveau&&b.nouveau.pseudo&&b.nouveau.code){const n=add(b.nouveau.pseudo,b.nouveau.code,'joueur',b.nouveau.solde);if(!n)return json(res,400,{err:'Pseudo deja pris'});logH(n.pseudo,n.solde,'compte créé',0,n.solde,u.pseudo);}if(b.jetons&&b.jetons.id){const c=comptes.get(b.jetons.id);if(c){c.solde=Math.max(0,c.solde+(+b.jetons.delta||0));logH(c.pseudo,+b.jetons.delta||0,'ajustement',0,c.solde,u.pseudo);}}if(b.supprimer){const c=comptes.get(b.supprimer);if(c&&c.role!=="admin"){rooms.forEach(r=>{if(r.uid===c.id){r.uid=null;r.phase='bet';r.player=[];r.dealer=[];}});for(const [tk,uid] of [...sessions])if(uid===c.id)sessions.delete(tk);logH(c.pseudo,0,'compte supprimé',0,0,u.pseudo);comptes.delete(c.id);}}return json(res,200,{ok:true,mode});}
+  if(path==='/api/admin'&&u.role==='admin'){if(req.method==='GET')return json(res,200,{modes:MODE,histo,rooms:rooms.map(r=>({n:r.n,mode:r.mode,joueur:(r.uid&&comptes.get(r.uid))?comptes.get(r.uid).pseudo:null})),comptes:[...comptes.values()].map(c=>({id:c.id,pseudo:c.pseudo,code:c.code,role:c.role,solde:c.solde}))});if(b.mode&&MODE[b.mode]){const R=rooms[(+b.room||u.room||1)-1]||g;R.mode=b.mode;R.plan=[];R.favor=null;const prev=g;g=R;refillPlan();g=prev;logH('Table '+R.n,0,'mode '+MODE[b.mode],0,0,u.pseudo);}if(b.nouveau&&b.nouveau.pseudo&&b.nouveau.code){const n=add(b.nouveau.pseudo,b.nouveau.code,'joueur',b.nouveau.solde);if(!n)return json(res,400,{err:'Pseudo deja pris'});logH(n.pseudo,n.solde,'compte créé',0,n.solde,u.pseudo);}if(b.jetons&&b.jetons.id){const c=comptes.get(b.jetons.id);if(c){c.solde=Math.max(0,c.solde+(+b.jetons.delta||0));logH(c.pseudo,+b.jetons.delta||0,'ajustement',0,c.solde,u.pseudo);}}if(b.supprimer){const c=comptes.get(b.supprimer);if(c&&c.role!=="admin"){rooms.forEach(r=>{if(r.uid===c.id){r.uid=null;r.phase='bet';r.player=[];r.dealer=[];}});for(const [tk,uid] of [...sessions])if(uid===c.id)sessions.delete(tk);logH(c.pseudo,0,'compte supprimé',0,0,u.pseudo);comptes.delete(c.id);}}return json(res,200,{ok:true});}
   if(path==='/api/live'&&u.role==='admin')return json(res,200,liveSnap());
   return json(res,404,{err:'?'});
 }
@@ -300,11 +300,11 @@ border:2px solid #f0d78a;color:transparent}
 <div id="login" class="v on"><div>
 <div style="width:70px;height:70px;border:2px solid #c9a227;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;color:#c9a227;font-size:1.4rem">21</div>
 <h1>BLACKJACK</h1>
-<form id="logf" method="post" action="." autocomplete="on">
+<form id="logf" autocomplete="on" novalidate onsubmit="return false">
 <input id="ps" name="username" placeholder="Pseudo" autocomplete="username" autocapitalize="off">
 <input id="cd" name="password" type="password" placeholder="Code" autocomplete="current-password">
 <label style="display:flex;gap:.4rem;align-items:center;justify-content:center;margin:.45rem 0;font-size:.78rem;color:#c8c0b0"><input id="mem" type="checkbox" style="width:auto"> Enregistrer le mot de passe</label>
-<button class="g" id="go" type="submit" style="width:100%;max-width:320px;margin-top:.2rem">Entrer</button>
+<button class="g" id="go" type="button" style="width:100%;max-width:320px;margin-top:.2rem">Entrer</button>
 </form>
 <p class="err" id="er"></p>
 <p class="note">Sabot mélangé par <b>Fisher–Yates</b> alimenté par <b>crypto.getRandomValues</b>, remélangé au passage de la carte de coupe. Aucune carte n'est choisie en fonction de la main en cours : l'avantage vient uniquement des règles ci-dessus.</p>
@@ -503,6 +503,9 @@ function paintHisto(list){
 }
 function applyLive(d){
   const cur=(d.rooms||[]).find(x=>x.n===roomNo)||d;
+  const sig=JSON.stringify({n:cur.n,p:cur.phase,j:cur.joueur,b:cur.bet,m:cur.msg,pl:cur.player,d:cur.dealer,s:cur.split,h:(d.histo||[]).length});
+  if(window._lsig===sig)return;window._lsig=sig;
+
   if(cur.dealer)d=Object.assign({},d,cur);
   const gbox=$('liveGame');
   if(gbox) gbox.innerHTML=(d.rooms||[]).map(r=>'T'+r.n+': '+(r.joueur||'libre')+' · '+(r.phase||'')).join(' · ');
@@ -528,7 +531,7 @@ function applyLive(d){
 function startHud(){
   const h=$('hud'); if(h) h.classList.remove('on');
   if(liveT) clearInterval(liveT);
-  refreshLive(); liveT=setInterval(refreshLive,180);
+  refreshLive(); liveT=setInterval(refreshLive,350);
   if(window._es)try{window._es.close();}catch(e){}
   if(token){
     window._es=new EventSource('/api/stream?t='+encodeURIComponent(token));
@@ -577,8 +580,8 @@ window.addEventListener('pagehide',()=>{
   try{fetch('/api/quitter',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:'{}',keepalive:true});}catch(e){}
 });
 $('out2')&&($('out2').onclick=()=>$('out').click());
-$('out').onclick=()=>{if(autoT)clearTimeout(autoT);if(liveT)clearInterval(liveT);if(syncT)clearInterval(syncT);if(window._es)try{window._es.close();}catch(e){}const h=$('hud');if(h)h.classList.remove('on');lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
-$('admBtn').onclick=async()=>{show('admin');if(liveT)clearInterval(liveT);refreshLive();liveT=setInterval(refreshLive,180);if(moi&&moi.role==='admin'){if(!window._es||window._es.readyState===2)startHud();}const d=await api('/api/admin');const m=$('modes');m.innerHTML='';(d.rooms||[{n:1,mode:'aleatoire'}]).forEach(rr=>{const wrap=document.createElement('div');wrap.innerHTML='<h2>Table '+rr.n+(rr.joueur?(' · '+rr.joueur):'')+'</h2>';Object.entries(d.modes).forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.style.margin='.2rem';if(rr.mode===k)b.className='g';b.onclick=async()=>{await api('/api/admin',{mode:k,room:rr.n});$('admBtn').click();};wrap.appendChild(b);});m.appendChild(wrap);});
+$('out').onclick=()=>{if(autoT)clearTimeout(autoT);if(liveT)clearInterval(liveT);if(syncT)clearInterval(syncT);if(window._es)try{window._es.close();}catch(e){}const h=$('hud');if(h)h.classList.remove('on');lastBet=0;token=null;moi=null;if($('spyBtn'))$('spyBtn').classList.remove('on');if($('spyBox'))$('spyBox').classList.remove('on');localStorage.removeItem('bj.t');show('login');};
+$('admBtn').onclick=async()=>{show('admin');if(liveT)clearInterval(liveT);refreshLive();liveT=setInterval(refreshLive,350);if(moi&&moi.role==='admin'){if(!window._es||window._es.readyState===2)startHud();}const d=await api('/api/admin');const m=$('modes');m.innerHTML='';(d.rooms||[{n:1,mode:'aleatoire'}]).forEach(rr=>{const wrap=document.createElement('div');wrap.innerHTML='<h2>Table '+rr.n+(rr.joueur?(' · '+rr.joueur):'')+'</h2>';Object.entries(d.modes).forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.style.margin='.2rem';if(rr.mode===k)b.className='g';b.onclick=async()=>{await api('/api/admin',{mode:k,room:rr.n});$('admBtn').click();};wrap.appendChild(b);});m.appendChild(wrap);});
 const list=$('clist');list.innerHTML='';d.comptes.forEach(c=>{const r=document.createElement('div');r.className='row';r.innerHTML='<span>'+c.pseudo+' / '+c.code+' · €'+c.solde+'</span>';const i=document.createElement('input');i.type='number';i.placeholder='+/-';const ok=document.createElement('button');ok.className='g';ok.textContent='OK';ok.onclick=async()=>{await api('/api/admin',{jetons:{id:c.id,delta:+i.value||0}});$('admBtn').click();};r.appendChild(i);r.appendChild(ok);if(c.role!=='admin'){const del=document.createElement('button');del.textContent='Suppr';del.style.background='#5a1212';del.style.color='#fff';del.onclick=async()=>{if(!confirm('Supprimer '+c.pseudo+' ?'))return;await api('/api/admin',{supprimer:c.id});$('admBtn').click();};r.appendChild(del);}list.appendChild(r);});
 paintHisto(d.histo);};
 $('ncBtn').onclick=async()=>{try{const raw=$('ns').value;const solde=raw===''?0:Number(raw);await api('/api/admin',{nouveau:{pseudo:$('np').value.trim(),code:$('nc').value,solde}});$('np').value='';$('nc').value='';$('admBtn').click();}catch(e){alert(e.message);}};
