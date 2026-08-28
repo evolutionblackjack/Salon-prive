@@ -278,11 +278,11 @@ async function revealDealer(s){
     const nd=C(D[1]);nd.classList.add('flip');
     if(kids[1])kids[1].replaceWith(nd);else box.appendChild(nd);sndCard();
     shown.push(D[1]);$('dt').textContent=totC(shown);
-    await new Promise(r=>setTimeout(r,700));
+    await new Promise(r=>setTimeout(r,380));
   }
   for(let i=2;i<D.length;i++){
     if(box.children[i]) continue;
-    await new Promise(r=>setTimeout(r,720));
+    await new Promise(r=>setTimeout(r,400));
     sndCard();box.appendChild(C(D[i]));shown.push(D[i]);$('dt').textContent=totC(shown);
   }
   $('dt').textContent=s.dtot!=null?s.dtot:totC(D);
