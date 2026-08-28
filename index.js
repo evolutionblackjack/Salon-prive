@@ -88,7 +88,7 @@ async function api(req,res,path){
   return json(res,404,{err:'?'});
 }
 const PAGE=`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><title>Blackjack</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,-apple-system,sans-serif;background:#0c1812;color:#f4efe4}
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,'Times New Roman',serif;background:#1a1008;color:#f4efe4}
 .v{display:none;min-height:100dvh;flex-direction:column}.v.on{display:flex}
 #login{align-items:center;justify-content:center;background:radial-gradient(circle at 30% 20%,#5a1212,#0a0404);padding:1.5rem;text-align:center}
 h1{letter-spacing:.2em;font-weight:500;margin:.6rem 0 1.2rem}
@@ -96,8 +96,9 @@ input{width:100%;max-width:320px;padding:.8rem;margin:.3rem 0;border:1px solid #
 button{border:0;border-radius:8px;padding:.7rem 1rem;font-weight:700}
 .g{background:linear-gradient(#e8d48b,#b8860b);color:#1a1205}.err{color:#f87171;min-height:1.2em}
 .bar{display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;background:#07110c}
-.felt{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:.5rem .5rem .3rem;display:flex;flex-direction:column;align-items:center;gap:.3rem;background:
-radial-gradient(ellipse at 50% 12%,#3a9a68 0%,#1a6b44 42%,#0c3a28 100%);}
+.felt{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:.45rem .5rem .3rem;display:flex;flex-direction:column;align-items:center;gap:.28rem;background:
+radial-gradient(ellipse at 50% 8%,#1f5c3a 0%,#0f3d28 55%,#0a2a1c 100%);border-radius:10px;}
+.brand{letter-spacing:.28em;font-size:.72rem;color:#e8d48b;margin:.15rem 0 .2rem}
 
 .hands-row{display:flex;justify-content:center;gap:1rem;width:100%;align-items:flex-start}
 .col{min-width:120px;padding:.25rem;border-radius:10px}
@@ -133,10 +134,10 @@ radial-gradient(ellipse at 50% 12%,#3a9a68 0%,#1a6b44 42%,#0c3a28 100%);}
 .banner b{display:block;letter-spacing:.2em;color:#e8d48b;font-size:.55rem}
 .banner span{font-size:1rem;font-weight:800;color:#fff}
 .acts{display:flex;justify-content:center;gap:.4rem;flex-wrap:wrap}
-.acts button{background:#c9a22722;color:#f4efe4;border:1px solid #c9a22755;min-height:44px;min-width:70px;-webkit-appearance:none}
+.acts button{background:linear-gradient(#1a3d2a,#0d2418);color:#f0e0a8;border:1px solid #c9a22766;min-height:44px;min-width:78px;border-radius:10px;-webkit-appearance:none}
 .acts .p{background:linear-gradient(#e8d48b,#b8860b);color:#1a1205;border:0}
 
-#game{background:#3a2418;padding:6px;height:100vh;height:100dvh;max-height:100dvh;overflow:hidden;position:relative;display:flex;flex-direction:column}
+#game{background:linear-gradient(#4a301c,#2a1810);padding:8px;height:100vh;height:100dvh;max-height:100dvh;overflow:hidden;position:relative;display:flex;flex-direction:column}
 #game .bar{display:none}
 .felt-top{width:100%;display:flex;justify-content:space-between;padding:0 .15rem .2rem}
 .mini{text-align:center;opacity:.65}
@@ -146,7 +147,7 @@ radial-gradient(ellipse at 50% 12%,#3a9a68 0%,#1a6b44 42%,#0c3a28 100%);}
 .arc{text-align:center;color:#c9b87a;opacity:.55;font-size:.62rem;letter-spacing:.07em;margin:.25rem 0;line-height:1.35}
 .oval{width:130px;height:58px;border:2px solid rgba(201,176,90,.5);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:.15rem auto}
 .vous{font-size:.58rem;letter-spacing:.22em;opacity:.5;margin-top:.1rem}
-.rail{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#5a3a22,#2a1810);padding:.4rem .75rem calc(.4rem + env(safe-area-inset-bottom));border-top:2px solid #c9a22755;flex-shrink:0}
+.rail{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#5c3a22,#2c1a10);padding:.45rem .8rem calc(.45rem + env(safe-area-inset-bottom));border:1px solid #c9a22755;border-radius:14px 14px 0 0;flex-shrink:0;margin-top:.2rem}
 .rail-cell{text-align:center;min-width:72px}
 .rail .rk{font-size:.52rem;letter-spacing:.16em;opacity:.65}
 .rail .rv{font-size:1.1rem;font-weight:700;color:#f0e0a8}
@@ -171,7 +172,7 @@ radial-gradient(ellipse at 50% 12%,#3a9a68 0%,#1a6b44 42%,#0c3a28 100%);}
 <p class="err" id="er"></p></div></div>
 <div id="game" class="v">
 <div class="bar"><b id="who"></b><span id="solde"></span><span><button class="g" id="admBtn" style="display:none;padding:.35rem .6rem">Admin</button> <button id="leave" style="background:#4a2a16;color:#f4efe4;padding:.35rem .55rem">Lever</button> <button id="out" style="background:#333;color:#fff;padding:.35rem .6rem">Déconnexion</button></span></div>
-<div class="felt">
+<div class="felt"><div class="brand">BLACKJACK</div>
   <div class="felt-top"><div class="mini"><div class="mb"></div><span>TALON</span></div><div class="lab">CROUPIER</div><div class="mini"><div class="mb s"></div><span>SABOT</span></div></div>
   <div class="hand" id="dh"></div><div class="tot" id="dt"></div>
   <div class="arc">LE BLACKJACK PAIE 3 POUR 2<br><small>LA BANQUE TIRE A 16 · RESTE A 17</small></div>
