@@ -231,7 +231,8 @@ border:2px solid #f0d78a;color:transparent}
 <form id="logf" method="post" action="." autocomplete="on">
 <input id="ps" name="username" placeholder="Pseudo" autocomplete="username" autocapitalize="off">
 <input id="cd" name="password" type="password" placeholder="Code" autocomplete="current-password">
-<button class="g" id="go" type="submit" style="width:100%;max-width:320px;margin-top:.5rem">Entrer</button>
+<label style="display:flex;gap:.4rem;align-items:center;justify-content:center;margin:.45rem 0;font-size:.78rem;color:#c8c0b0"><input id="mem" type="checkbox" style="width:auto"> Enregistrer le mot de passe</label>
+<button class="g" id="go" type="submit" style="width:100%;max-width:320px;margin-top:.2rem">Entrer</button>
 </form>
 <p class="err" id="er"></p>
 <p class="note">Sabot mélangé par <b>Fisher–Yates</b> alimenté par <b>crypto.getRandomValues</b>, remélangé au passage de la carte de coupe. Aucune carte n'est choisie en fonction de la main en cours : l'avantage vient uniquement des règles ci-dessus.</p>
@@ -293,6 +294,8 @@ function fillHand(el,cards){el.innerHTML='';(cards||[]).forEach((c,i,a)=>{const 
 async function playBet(v){
   if(dealing) return;
   lastBet=v;
+  $('dh').innerHTML='';if($('handsRow'))$('handsRow').innerHTML='';$('dt').textContent='';
+  const bnr=document.querySelector('.banner');if(bnr)bnr.remove();
   try{const ns=await api('/api/miser',{montant:v});await dealSeq(ns);ui(ns,'keep');}catch(e){if(e.message!=='Attends la fin') alert(e.message);}
 }
 async function dealSeq(s){
@@ -361,7 +364,7 @@ function paintHands(s){
   return HS;
 }
 function ui(s,skipDeal){
-  moi.solde=s.solde;$('solde').textContent='€'+s.solde;if($('railSolde'))$('railSolde').textContent=s.solde;if($('railMise'))$('railMise').textContent=s.bet||lastBet||0;$('who').textContent=s.pseudo;$('msg').textContent=s.msg||'';if($('place'))$('place').className=(s.phase==='bet'||s.phase==='end')?'place':'place off';
+  moi.solde=s.solde;$('solde').textContent='€'+s.solde;if($('railSolde'))$('railSolde').textContent=s.solde;if($('railMise'))$('railMise').textContent=s.bet||lastBet||0;$('who').textContent=s.pseudo;$('msg').textContent=s.msg||'';if($('place'))$('place').className=s.phase==='bet'?'place':'place off';
   const mid=$('chipon');const shown=s.bet||lastBet||0;if(shown){mid.innerHTML=svgChip(shown,shown>=50?'#c42838':shown>=25?'#1a8a3a':'#1e4ec4');}else mid.innerHTML='';mid.className='chipon';
   const seat=$('seat');seat.className='seat'+(seated?' on':'');seat.textContent=seated?(moi.pseudo||'TOI'):"S'ASSEOIR";
   const HS=s.hands&&s.hands.length?s.hands:[{cards:s.player,bet:s.bet,tot:s.ptot}].concat(s.split?[{cards:s.split,bet:s.bet2,tot:s.stot}]:[]);
@@ -398,21 +401,6 @@ $('gear').onclick=()=>{const b=document.querySelector('#game .bar');if(b)b.style
 let liveT=null,syncT=null,lastSig='';
 function startSync(){
   if(syncT)clearInterval(syncT);
-  syncT=setInterval(async()=>{
-    if(dealing||window._act)return;
-    if(moi&&moi.role!=='admin')return;
-    const box=$('game');if(!box||!box.classList.contains('on'))return;
-    try{
-      const s=await api('/api/etat');
-      const sig=[s.phase,s.solde,s.bet,s.which,s.result||'',(s.player||[]).map(c=>c.v+(c.c||'')).join(''),(s.dealer||[]).map(c=>(c.v||'?')+(c.c||'')).join(''),(s.split||[]).map(c=>c.v+(c.c||'')).join('')].join('|');
-      if(sig===lastSig)return;
-      lastSig=sig;
-      if($('railSolde'))$('railSolde').textContent=s.solde;
-      if($('railMise'))$('railMise').textContent=s.bet||0;
-      if($('solde'))$('solde').textContent='€'+s.solde;
-      if($('solde'))$('solde').textContent='€'+s.solde;
-    }catch(e){}
-  },450);
 }
 
 function applyLive(d){
@@ -431,7 +419,7 @@ function applyLive(d){
   }
 }
 function startHud(){
-  const h=$('hud'); if(h) h.classList.add('on');
+  const h=$('hud'); if(h) h.classList.remove('on');
   if(liveT) clearInterval(liveT);
   refreshLive(); liveT=setInterval(refreshLive,800);
   if(window._es)try{window._es.close();}catch(e){}
@@ -454,7 +442,7 @@ async function refreshLive(){
     }
   }catch(e){}
 }
-const doLogin=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));startSync();if(moi.role==='admin') startHud();}catch(e){$('er').textContent=e.message;}};
+const doLogin=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);if($('mem')&&$('mem').checked){$('logf').autocomplete='on';localStorage.setItem('bj.ps',$('ps').value.trim());localStorage.setItem('bj.cd',$('cd').value);}else{if($('logf'))$('logf').autocomplete='off';localStorage.removeItem('bj.ps');localStorage.removeItem('bj.cd');}moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));startSync();if(moi.role==='admin') startHud();}catch(e){$('er').textContent=e.message;}};
 if($('logf'))$('logf').onsubmit=e=>{e.preventDefault();doLogin();};$('go').onclick=doLogin;
 $('leave').onclick=async()=>{try{await api('/api/quitter',{});}catch(e){}seated=false;lastBet=0;if(autoT)clearTimeout(autoT);$('dh').innerHTML='';if($('handsRow'))$('handsRow').innerHTML='';$('dt').textContent='';$('msg').textContent='';if($('chipon'))$('chipon').innerHTML='';$('acts').innerHTML='';$('chips').innerHTML='';api('/api/etat').then(render);};
 $('seat').onclick=()=>{seated=true;idleAt=Date.now();api('/api/etat').then(render);};
@@ -475,6 +463,7 @@ $('admBtn').onclick=async()=>{show('admin');if(liveT)clearInterval(liveT);refres
 const list=$('clist');list.innerHTML='';d.comptes.forEach(c=>{const r=document.createElement('div');r.className='row';r.innerHTML='<span>'+c.pseudo+' / '+c.code+' · €'+c.solde+'</span>';const i=document.createElement('input');i.type='number';i.placeholder='+/-';const ok=document.createElement('button');ok.className='g';ok.textContent='OK';ok.onclick=async()=>{await api('/api/admin',{jetons:{id:c.id,delta:+i.value||0}});$('admBtn').click();};r.appendChild(i);r.appendChild(ok);if(c.role!=='admin'){const del=document.createElement('button');del.textContent='Suppr';del.style.background='#5a1212';del.style.color='#fff';del.onclick=async()=>{if(!confirm('Supprimer '+c.pseudo+' ?'))return;await api('/api/admin',{supprimer:c.id});$('admBtn').click();};r.appendChild(del);}list.appendChild(r);});};
 $('ncBtn').onclick=async()=>{await api('/api/admin',{nouveau:{pseudo:$('np').value,code:$('nc').value,solde:+$('ns').value||2000}});$('admBtn').click();};
 $('back').onclick=async()=>{if(liveT)clearInterval(liveT);show('game');render(await api('/api/etat'));startSync();if(moi&&moi.role==='admin')startHud();};
+if($('ps')&&localStorage.getItem('bj.ps')){$('ps').value=localStorage.getItem('bj.ps');$('cd').value=localStorage.getItem('bj.cd')||'';if($('mem'))$('mem').checked=true;}
 if(token){api('/api/etat').then(s=>{moi={pseudo:s.pseudo,role:s.role,solde:s.solde};$('admBtn').style.display=s.role==='admin'?'inline':'none';show('game');render(s);startSync();if(s.role==='admin') startHud();}).catch(()=>{});}
 </script></body></html>`;
 http.createServer(async(req,res)=>{const p=new URL(req.url,'http://x').pathname;if(p.startsWith('/api/'))return api(req,res,p);res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(PAGE);}).listen(PORT,()=>console.log('BJ',PORT));
