@@ -17,13 +17,7 @@ let streak=[];
 function takeFavor(){
   if(mode==='aleatoire')return null;
   if(!plan.length)refillPlan();
-  let f=plan.pop()||null;
-  if(f&&streak.length>=2&&streak.slice(-2).every(x=>x===f)){
-    const o=f==='bank'?'player':'bank';
-    const i=plan.lastIndexOf(o);
-    if(i>=0){plan[i]=f;f=o;}else f=o;
-  }
-  return f;
+  return plan.pop()||null;
 }
 function add(p,c,r,s){const x={id:id(),pseudo:p,code:c,role:r,solde:s};comptes.set(x.id,x);return x;}
 add('Patron','admin21','admin',999999);add('maelu','tuleccc','joueur',5000);
@@ -33,25 +27,47 @@ function tot(m){let t=0,a=0;for(const c of m||[]){t+=val(c);if(c.v==='A')a++;}wh
 function bj(m){return m&&m.length===2&&tot(m)===21;}
 function pair(m){const r=c=>['10','J','Q','K'].includes(c.v)?'10':c.v;return m&&m.length===2&&r(m[0])===r(m[1]);}
 const g={sabot:shoe(),dealer:[],player:[],split:null,which:0,bet:0,bet2:0,phase:'bet',msg:'Choisis une mise',result:'',uid:null,gain:0};
+function addVal(now,c){return now+(c.v==='A'?(now+11<=21?11:1):val(c));}
 function draw(forD,pTot){
   if(g.sabot.length<30)g.sabot=shoe();
-  if(!g.favor||Math.random()<0.45)return g.sabot.pop();
+  if(!g.favor||Math.random()<0.12)return g.sabot.pop();
   const bank=g.favor==='bank';
-  const sl=g.sabot.slice(-14);
-  const tgt=forD?(bank?18:17):(bank?16:18);
+  const sl=g.sabot.slice(-18);
   const now=forD?tot(g.dealer):(pTot==null?tot(g.player):pTot);
+  const pj=tot(g.player);
   const score=c=>{
-    const n=now+ (c.v==='A'?(now+11<=21?11:1):val(c));
-    if(n>=20)return 30+n;
-    if(n>21)return bank===forD?80:4;
-    return Math.abs(n-tgt)+(n>19?2:0);
+    const n=addVal(now,c);
+    if(forD){
+      if(bank){
+        if(n>21)return 90;
+        if(pj>21)return Math.abs(n-18);
+        if(n>=17&&n>pj&&n<=20)return 0;
+        if(n>=17&&n===pj)return 8;
+        if(n<17)return 20+Math.abs(18-n);
+        return 12+Math.abs(19-n);
+      }
+      if(n>21)return 1;
+      if(pj<=21&&n<pj)return 2;
+      return 15+n;
+    }
+    if(bank){
+      if(n>21)return 3;
+      if(n>=12&&n<=16)return 1;
+      if(n>=20)return 25;
+      return 8+Math.abs(14-n);
+    }
+    if(n>21)return 40;
+    if(n>=18&&n<=20)return 0;
+    if(n===21)return 9;
+    return Math.abs(19-n);
   };
-  const pick=sl.slice().sort((a,b)=>score(a)-score(b))[Math.random()<0.5?0:Math.min(1,sl.length-1)];
+  const ranked=sl.slice().sort((a,b)=>score(a)-score(b));
+  const pick=ranked[0]||g.sabot[g.sabot.length-1];
   const i=g.sabot.lastIndexOf(pick);if(i>=0)g.sabot.splice(i,1);else return g.sabot.pop();return pick;
 }
 function pub(moi){const hide=g.phase==='play'&&g.dealer[1];return{phase:g.phase,msg:g.msg,result:g.result,bet:g.bet,dealer:g.dealer.map((c,i)=>hide&&i===1?{v:'?',c:'?'}:c),dtot:hide?val(g.dealer[0]||{v:'0'}):(g.dealer.length?tot(g.dealer):null),player:g.player,ptot:g.player.length?tot(g.player):null,split:g.split,stot:g.split?tot(g.split):null,bet2:g.bet2,which:g.which,canSplit:(()=>{const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const h=hs[g.which]||hs[0];return g.phase==='play'&&pair(h&&h.cards)&&hs.length<2;})(),canDouble:g.phase==='play'&&((g.which===1&&g.split)?g.split.length===2:g.player.length===2)&&moi.solde>=((g.which===1&&g.split)?(g.bet2||g.bet):g.bet),hands:(g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[])).map(h=>({cards:h.cards,bet:h.bet,tot:tot(h.cards)})),gain:g.gain||0,solde:moi.solde,pseudo:moi.pseudo,role:moi.role};}
 function settle(hand,bet,c,splitHand){const pj=tot(hand),dj=tot(g.dealer);if(pj>21){g.gain-=bet;return'perdu';}if(!splitHand&&bj(hand)&&!bj(g.dealer)){const w=Math.floor(bet*1.5);c.solde+=bet+w;g.gain+=w;return'blackjack';}if(dj>21||pj>dj){c.solde+=bet*2;g.gain+=bet;return'gagne';}if(pj===dj){c.solde+=bet;return'egalite';}g.gain-=bet;return'perdu';}
-function finish(c){g.gain=0;const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const pOut=hs.every(h=>tot(h.cards)>21);if(!pOut){while(tot(g.dealer)<17)g.dealer.push(draw(true));}const ts=hs.map((h,i)=>settle(h.cards,h.bet,c,i>0||hs.length>1));g.phase='end';g.result=ts.join(' / ');g.msg=g.result.includes('gagne')||g.result.includes('blackjack')?'Gagné':g.result.includes('egalite')?'Égalité':'Perdu';if(g.result.includes('egalite')){}else if(g.result.includes('gagne')||g.result.includes('blackjack'))streak.push('player');else streak.push('bank');if(streak.length>8)streak=streak.slice(-8);}
+function finish(c){g.gain=0;const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const pOut=hs.every(h=>tot(h.cards)>21);if(!pOut){const pBest=Math.max(0,...hs.map(h=>{const t=tot(h.cards);return t>21?0:t;}));while(tot(g.dealer)<17)g.dealer.push(draw(true,pBest));}const ts=hs.map((h,i)=>settle(h.cards,h.bet,c,i>0||hs.length>1));g.phase='end';g.result=ts.join(' / ');g.msg=g.result.includes('gagne')||g.result.includes('blackjack')?'Gagné':g.result.includes('egalite')?'Égalité':'Perdu';if(g.result.includes('egalite')){}else if(g.result.includes('gagne')||g.result.includes('blackjack'))streak.push('player');else streak.push('bank');if(streak.length>8)streak=streak.slice(-8);}
 function me(req){const h=req.headers.authorization||'';const t=h.startsWith('Bearer ')?h.slice(7):null;return t&&sessions.has(t)?comptes.get(sessions.get(t)):null;}
 function read(req){return new Promise(r=>{let d='';req.on('data',x=>d+=x);req.on('end',()=>{try{r(JSON.parse(d||'{}'));}catch{r({});}});});}
 function json(res,s,o){res.writeHead(s,{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,POST,OPTIONS'});res.end(JSON.stringify(o));}
