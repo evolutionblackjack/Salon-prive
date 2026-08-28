@@ -68,27 +68,53 @@ function draw(forD,pTot){
 function pub(moi){const hide=g.phase==='play'&&g.dealer[1];return{phase:g.phase,msg:g.msg,result:g.result,bet:g.bet,dealer:g.dealer.map((c,i)=>hide&&i===1?{v:'?',c:'?'}:c),dtot:hide?val(g.dealer[0]||{v:'0'}):(g.dealer.length?tot(g.dealer):null),player:g.player,ptot:g.player.length?tot(g.player):null,split:g.split,stot:g.split?tot(g.split):null,bet2:g.bet2,which:g.which,canSplit:(()=>{const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const h=hs[g.which]||hs[0];return g.phase==='play'&&pair(h&&h.cards)&&hs.length<2;})(),canDouble:g.phase==='play'&&((g.which===1&&g.split)?g.split.length===2:g.player.length===2)&&moi.solde>=((g.which===1&&g.split)?(g.bet2||g.bet):g.bet),hands:(g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[])).map(h=>({cards:h.cards,bet:h.bet,tot:tot(h.cards)})),gain:g.gain||0,solde:moi.solde,pseudo:moi.pseudo,role:moi.role};}
 function settle(hand,bet,c,splitHand){const pj=tot(hand),dj=tot(g.dealer);if(pj>21){g.gain-=bet;return'perdu';}if(!splitHand&&bj(hand)&&!bj(g.dealer)){const w=Math.floor(bet*1.5);c.solde+=bet+w;g.gain+=w;return'blackjack';}if(dj>21||pj>dj){c.solde+=bet*2;g.gain+=bet;return'gagne';}if(pj===dj){c.solde+=bet;return'egalite';}g.gain-=bet;return'perdu';}
 function finish(c){g.gain=0;const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const pOut=hs.every(h=>tot(h.cards)>21);if(!pOut){const pBest=Math.max(0,...hs.map(h=>{const t=tot(h.cards);return t>21?0:t;}));while(tot(g.dealer)<17)g.dealer.push(draw(true,pBest));}const ts=hs.map((h,i)=>settle(h.cards,h.bet,c,i>0||hs.length>1));g.phase='end';g.result=ts.join(' / ');g.msg=g.result.includes('gagne')||g.result.includes('blackjack')?'Gagné':g.result.includes('egalite')?'Égalité':'Perdu';if(g.result.includes('egalite')){}else if(g.result.includes('gagne')||g.result.includes('blackjack'))streak.push('player');else streak.push('bank');if(streak.length>8)streak=streak.slice(-8);}
+function liveSnap(){
+  const pl=g.uid?comptes.get(g.uid):null;
+  return {
+    phase:g.phase,msg:g.msg,bet:g.bet,bet2:g.bet2,result:g.result,
+    joueur:pl?pl.pseudo:null,soldeJoueur:pl?pl.solde:null,
+    dealer:g.dealer,player:g.player,split:g.split,
+    ptot:g.player.length?tot(g.player):null,dtot:g.dealer.length?tot(g.dealer):null,
+    comptes:[...comptes.values()].map(c=>({pseudo:c.pseudo,role:c.role,solde:c.solde}))
+  };
+}
+const watchers=new Set();
+function pushLive(){
+  const payload='data:'+JSON.stringify(liveSnap())+'\n\n';
+  for(const w of [...watchers]){try{w.write(payload);}catch(e){watchers.delete(w);}}
+}
 function me(req){const h=req.headers.authorization||'';const t=h.startsWith('Bearer ')?h.slice(7):null;return t&&sessions.has(t)?comptes.get(sessions.get(t)):null;}
 function read(req){return new Promise(r=>{let d='';req.on('data',x=>d+=x);req.on('end',()=>{try{r(JSON.parse(d||'{}'));}catch{r({});}});});}
 function json(res,s,o){res.writeHead(s,{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,POST,OPTIONS'});res.end(JSON.stringify(o));}
 async function api(req,res,path){
   if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,POST,OPTIONS'});return res.end();}
+  if(path==='/api/stream'){
+    const t=new URL(req.url,'http://x').searchParams.get('t');
+    const u=t&&sessions.has(t)?comptes.get(sessions.get(t)):null;
+    if(!u||u.role!=='admin')return json(res,401,{err:'Session'});
+    res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive','Access-Control-Allow-Origin':'*'});
+    watchers.add(res);
+    res.write('data:'+JSON.stringify(liveSnap())+'\n\n');
+    req.on('close',()=>watchers.delete(res));
+    return;
+  }
   const b=req.method==='POST'?await read(req):{};
   if(path==='/api/login'&&req.method==='POST'){let c=null;for(const x of comptes.values())if(x.pseudo.toLowerCase()===String(b.pseudo||'').toLowerCase()&&x.code===String(b.code||''))c=x;if(!c)return json(res,401,{err:'Code refusé'});if(c.solde<10)c.solde=3000;const t=id()+id();sessions.set(t,c.id);return json(res,200,{token:t,moi:{pseudo:c.pseudo,role:c.role,solde:c.solde}});}
   const u=me(req);if(!u)return json(res,401,{err:'Session'});
   if(path==='/api/etat')return json(res,200,pub(u));
-  if(path==='/api/miser'&&req.method==='POST'){if(g.phase!=='bet'&&g.phase!=='end')return json(res,400,{err:'Attends la fin'});const m=+b.montant;if(!(m>=10&&m<=100))return json(res,400,{err:'Mise 10 a 100'});if(u.solde<m)return json(res,400,{err:'Solde'});g.uid=u.id;g.player=[];g.split=null;g.hands=[];g.dealer=[];g.which=0;g.result='';g.favor=takeFavor();u.solde-=m;g.bet=m;g.bet2=0;g.player.push(draw(false,0));g.dealer.push(draw(true));g.player.push(draw(false,tot(g.player)));g.dealer.push(draw(true));if(bj(g.player)){g.phase='end';if(!bj(g.dealer)){u.solde+=Math.floor(m*2.5);g.gain=Math.floor(m*1.5);g.msg='Blackjack';g.result='blackjack';}else{u.solde+=m;g.gain=0;g.msg='Égalité';g.result='egalite';}g.hands=[{cards:g.player,bet:g.bet}];}else{g.phase='play';g.msg='Ton tour : Tirer, Doubler ou Rester';g.hands=[{cards:g.player,bet:g.bet}];}return json(res,200,pub(u));}
+  if(path==='/api/miser'&&req.method==='POST'){if(g.phase!=='bet'&&g.phase!=='end')return json(res,400,{err:'Attends la fin'});const m=+b.montant;if(!(m>=10&&m<=100))return json(res,400,{err:'Mise 10 a 100'});if(u.solde<m)return json(res,400,{err:'Solde'});g.uid=u.id;g.player=[];g.split=null;g.hands=[];g.dealer=[];g.which=0;g.result='';g.favor=takeFavor();u.solde-=m;g.bet=m;g.bet2=0;g.player.push(draw(false,0));g.dealer.push(draw(true));g.player.push(draw(false,tot(g.player)));g.dealer.push(draw(true));if(bj(g.player)){g.phase='end';if(!bj(g.dealer)){u.solde+=Math.floor(m*2.5);g.gain=Math.floor(m*1.5);g.msg='Blackjack';g.result='blackjack';}else{u.solde+=m;g.gain=0;g.msg='Égalité';g.result='egalite';}g.hands=[{cards:g.player,bet:g.bet}];}else{g.phase='play';g.msg='Ton tour : Tirer, Doubler ou Rester';g.hands=[{cards:g.player,bet:g.bet}];}pushLive();return json(res,200,pub(u));}
   if(path==='/api/action'&&req.method==='POST'){if(g.phase!=='play')return json(res,400,{err:'Pas le moment de tirer'});g.uid=u.id;if(!g.hands||!g.hands.length)g.hands=[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2||g.bet}]:[]);const H=g.hands[g.which]||g.hands[0];const hand=H.cards;const a=b.action;const next=()=>{g.player=g.hands[0].cards;g.bet=g.hands[0].bet;g.split=g.hands[1]?g.hands[1].cards:null;g.bet2=g.hands[1]?g.hands[1].bet:0;if(g.which<g.hands.length-1){g.which++;g.msg='Main '+(g.which+1);}else finish(u);};
     if(a==='hit'){hand.push(draw(false,tot(hand)));if(tot(hand)>21)next();}
     else if(a==='stand')next();
     else if(a==='double'){if(hand.length!==2)return json(res,400,{err:'2 cartes'});if(u.solde<H.bet)return json(res,400,{err:'Solde'});u.solde-=H.bet;H.bet*=2;hand.push(draw(false,tot(hand)));next();}
     else if(a==='split'){if(!g.hands||!g.hands.length)g.hands=[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2||g.bet}]:[]);const h=g.hands[g.which];if(!pair(h.cards)||g.hands.length>=2)return json(res,400,{err:'Deja separe'});if(u.solde<h.bet)return json(res,400,{err:'Solde'});u.solde-=h.bet;const ace=h.cards[0].v==='A';const c2=h.cards.pop();const nh={cards:[c2],bet:h.bet};h.cards.push(draw(false,tot(h.cards)));nh.cards.push(draw(false,tot(nh.cards)));g.hands.splice(g.which+1,0,nh);g.player=g.hands[0].cards;g.bet=g.hands[0].bet;g.split=g.hands[1]?g.hands[1].cards:null;g.bet2=g.hands[1]?g.hands[1].bet:0;if(ace){g.msg='As separes';g.which=Math.min(g.which+1,g.hands.length-1);if(g.which>=g.hands.length-1)finish(u);}else{g.msg='Main '+(g.which+1);}}
-    else return json(res,400,{err:'Action'});return json(res,200,pub(u));}
+    else return json(res,400,{err:'Action'});pushLive();return json(res,200,pub(u));}
   if(path==='/api/quitter'&&req.method==='POST'){
     if(g.uid===u.id||!g.uid){
       if(g.phase==='play'){if(g.hands&&g.hands.length)g.hands.forEach(h=>u.solde+=(h.bet||0));else{u.solde+=g.bet||0;if(g.bet2)u.solde+=g.bet2;}}
       g.player=[];g.dealer=[];g.split=null;g.hands=[];g.bet=0;g.bet2=0;g.which=0;g.phase='bet';g.msg='Mise';g.result='';g.uid=null;g.gain=0;
     }
+    pushLive();
     return json(res,200,pub(u));
   }
   if(path==='/api/admin'&&u.role==='admin'){if(req.method==='GET')return json(res,200,{mode,modes:MODE,comptes:[...comptes.values()].map(c=>({id:c.id,pseudo:c.pseudo,code:c.code,role:c.role,solde:c.solde}))});if(b.mode&&MODE[b.mode]){mode=b.mode;plan=[];g.favor=null;refillPlan();}if(b.nouveau&&b.nouveau.pseudo&&b.nouveau.code)add(b.nouveau.pseudo,b.nouveau.code,'joueur',+b.nouveau.solde||2000);if(b.jetons&&b.jetons.id){const c=comptes.get(b.jetons.id);if(c)c.solde=Math.max(0,c.solde+(+b.jetons.delta||0));}return json(res,200,{ok:true,mode});}
@@ -219,7 +245,7 @@ border:2px solid #f0d78a;color:transparent}
 <div class="hud" id="hud"><div id="hudTxt">Live…</div></div>
 <div class="dock"><div class="chips" id="chips"></div><div class="acts" id="acts"></div></div></div>
 <div id="admin" class="v"><div class="bar"><b>Régie</b><button class="g" id="back">Retour</button></div>
-<div class="livebox"><b>Live table</b><div id="liveGame">—</div></div>
+<div class="livebox"><b>Live table</b><div id="liveGame">—</div><div id="liveFelt" style="margin-top:.6rem"><div class="lab">BANQUE</div><div class="hand" id="liveDH"></div><div class="lab" style="margin-top:.4rem">JOUEUR</div><div class="hand" id="livePH"></div><div class="hand" id="liveSH" style="margin-top:.3rem"></div></div></div>
 <h2>Soldes en direct</h2><div id="liveSoldes"></div>
 <div id="modes"></div><h2>Nouveau compte</h2>
 <div class="row"><input id="np" placeholder="Pseudo"><input id="nc" placeholder="Code"><input id="ns" type="number" value="2000"><button class="g" id="ncBtn">Créer</button></div>
@@ -358,31 +384,58 @@ let liveT=null,syncT=null,lastSig='';
 function startSync(){
   if(syncT)clearInterval(syncT);
   syncT=setInterval(async()=>{
-    if(dealing||window._act)return;
-    const g=$('game');if(!g||!g.classList.contains('on'))return;
+    if(window._act)return;
+    const box=$('game');if(!box||!box.classList.contains('on'))return;
     try{
       const s=await api('/api/etat');
-      const sig=[s.phase,s.solde,s.bet,s.which,s.result||'',(s.player||[]).map(c=>c.v+c.c).join(''),(s.dealer||[]).map(c=>(c.v||'?')+(c.c||'')).join(''),(s.split||[]).map(c=>c.v+c.c).join('')].join('|');
+      const sig=[s.phase,s.solde,s.bet,s.which,s.result||'',(s.player||[]).map(c=>c.v+(c.c||'')).join(''),(s.dealer||[]).map(c=>(c.v||'?')+(c.c||'')).join(''),(s.split||[]).map(c=>c.v+(c.c||'')).join('')].join('|');
       if(sig===lastSig)return;
       lastSig=sig;
-      ui(s,'keep');
+      if($('railSolde'))$('railSolde').textContent=s.solde;
+      if($('railMise'))$('railMise').textContent=s.bet||0;
+      if($('solde'))$('solde').textContent='€'+s.solde;
+      if($('msg'))$('msg').textContent=s.msg||'';
       paintHands(s);
-      if(s.dealer&&s.dealer.length){if($('dt'))$('dt').textContent=s.dtot!=null?s.dtot:'';}
+      const dh=$('dh');
+      if(dh&&!dealing){
+        syncHand(dh,s.dealer||[]);
+        if($('dt'))$('dt').textContent=s.dtot!=null?s.dtot:'';
+      }
+      if(s.phase==='bet'||s.phase==='end'||s.phase==='play')ui(s,'keep');
     }catch(e){}
-  },700);
+  },450);
 }
 
+function applyLive(d){
+  const gbox=$('liveGame');
+  if(gbox) gbox.innerHTML=(d.joueur?('Joue: <b>'+d.joueur+'</b> · €'+(d.soldeJoueur||0)+' · mise €'+(d.bet||0)+' · '+d.phase+' · '+(d.msg||'')):'Personne a la table');
+  const ldh=$('liveDH'),lph=$('livePH'),lsh=$('liveSH');
+  if(ldh)syncHand(ldh,d.dealer||[]);
+  if(lph)syncHand(lph,d.player||[]);
+  if(lsh){if(d.split&&d.split.length){lsh.style.display='flex';syncHand(lsh,d.split);}else{lsh.innerHTML='';lsh.style.display='none';}}
+  const ls=$('liveSoldes'); if(ls){ls.innerHTML='';(d.comptes||[]).forEach(c=>{const r=document.createElement('div');r.className='p';r.innerHTML='<span>'+c.pseudo+(c.role==='admin'?' · admin':'')+'</span><b>€'+c.solde+'</b>';ls.appendChild(r);});}
+  const hud=$('hudTxt');
+  if(hud){
+    const people=(d.comptes||[]).map(c=>'<div class="line"><span>'+c.pseudo+'</span><b>€'+c.solde+'</b></div>').join('');
+    const play=d.joueur?('<div style="margin-bottom:.25rem">Table : <b>'+d.joueur+'</b> mise €'+(d.bet||0)+' · '+(d.phase||'')+' · '+(d.msg||'')+'</div>'):'<div style="margin-bottom:.25rem">Table libre</div>';
+    hud.innerHTML=play+people;
+  }
+}
 function startHud(){
   const h=$('hud'); if(h) h.classList.add('on');
   if(liveT) clearInterval(liveT);
-  refreshLive(); liveT=setInterval(refreshLive,1000);
+  refreshLive(); liveT=setInterval(refreshLive,800);
+  if(window._es)try{window._es.close();}catch(e){}
+  if(token){
+    window._es=new EventSource('/api/stream?t='+encodeURIComponent(token));
+    window._es.onmessage=e=>{try{applyLive(JSON.parse(e.data));}catch(x){}};
+  }
 }
 
 async function refreshLive(){
   try{
     const d=await api('/api/live');
-    const gbox=$('liveGame');
-    if(gbox) gbox.innerHTML=(d.joueur?('Joue: <b>'+d.joueur+'</b> · €'+(d.soldeJoueur||0)+' · mise €'+(d.bet||0)+' · '+d.phase+' · '+(d.msg||'')):'Personne a la table');
+    applyLive(d);
     const ls=$('liveSoldes'); if(ls){ls.innerHTML='';(d.comptes||[]).forEach(c=>{const r=document.createElement('div');r.className='p';r.innerHTML='<span>'+c.pseudo+(c.role==='admin'?' · admin':'')+'</span><b>€'+c.solde+'</b>';ls.appendChild(r);});}
     const hud=$('hudTxt');
     if(hud){
@@ -396,8 +449,8 @@ $('go').onclick=async()=>{$('er').textContent='';try{const d=await api('/api/log
 $('leave').onclick=async()=>{try{await api('/api/quitter',{});}catch(e){}seated=false;lastBet=0;if(autoT)clearTimeout(autoT);$('dh').innerHTML='';if($('handsRow'))$('handsRow').innerHTML='';$('dt').textContent='';$('msg').textContent='';if($('chipon'))$('chipon').innerHTML='';$('acts').innerHTML='';$('chips').innerHTML='';api('/api/etat').then(render);};
 $('seat').onclick=()=>{seated=true;api('/api/etat').then(render);};
 $('out2')&&($('out2').onclick=()=>$('out').click());
-$('out').onclick=()=>{if(autoT)clearTimeout(autoT);if(liveT)clearInterval(liveT);if(syncT)clearInterval(syncT);const h=$('hud');if(h)h.classList.remove('on');lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
-$('admBtn').onclick=async()=>{show('admin');if(liveT)clearInterval(liveT);refreshLive();liveT=setInterval(refreshLive,1000);const d=await api('/api/admin');const m=$('modes');m.innerHTML='<h2>Mode</h2>';Object.entries(d.modes).forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.style.margin='.2rem';if(d.mode===k)b.className='g';b.onclick=async()=>{await api('/api/admin',{mode:k});$('admBtn').click();};m.appendChild(b);});
+$('out').onclick=()=>{if(autoT)clearTimeout(autoT);if(liveT)clearInterval(liveT);if(syncT)clearInterval(syncT);if(window._es)try{window._es.close();}catch(e){}const h=$('hud');if(h)h.classList.remove('on');lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
+$('admBtn').onclick=async()=>{show('admin');if(liveT)clearInterval(liveT);refreshLive();liveT=setInterval(refreshLive,400);const d=await api('/api/admin');const m=$('modes');m.innerHTML='<h2>Mode</h2>';Object.entries(d.modes).forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.style.margin='.2rem';if(d.mode===k)b.className='g';b.onclick=async()=>{await api('/api/admin',{mode:k});$('admBtn').click();};m.appendChild(b);});
 const list=$('clist');list.innerHTML='';d.comptes.forEach(c=>{const r=document.createElement('div');r.className='row';r.innerHTML='<span>'+c.pseudo+' / '+c.code+' · €'+c.solde+'</span>';const i=document.createElement('input');i.type='number';i.placeholder='+/-';const ok=document.createElement('button');ok.className='g';ok.textContent='OK';ok.onclick=async()=>{await api('/api/admin',{jetons:{id:c.id,delta:+i.value||0}});$('admBtn').click();};r.appendChild(i);r.appendChild(ok);list.appendChild(r);});};
 $('ncBtn').onclick=async()=>{await api('/api/admin',{nouveau:{pseudo:$('np').value,code:$('nc').value,solde:+$('ns').value||2000}});$('admBtn').click();};
 $('back').onclick=async()=>{if(liveT)clearInterval(liveT);show('game');render(await api('/api/etat'));startSync();if(moi&&moi.role==='admin')startHud();};
