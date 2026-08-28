@@ -50,7 +50,7 @@ function draw(forD,now){
 function liveSnap(){
   return{
     phase:T.phase,msg:T.msg,until:T.until,now:Date.now(),turn:T.turn,
-    dealer:T.dealer,seats:T.seats.map(s=>s?{pseudo:s.pseudo,bet:s.bet,res:s.res,cards:(s.hands[0]&&s.hands[0].cards)||[]}:null),
+    dealer:T.dealer,seats:T.seats.map(s=>s?{pseudo:s.pseudo,bet:s.bet,res:s.res,hi:s.hi,hands:s.hands.map(h=>({cards:h.cards,tot:tot(h.cards),bet:h.bet}))}:null),
     comptes:[...comptes.values()].map(c=>({pseudo:c.pseudo,role:c.role,solde:c.solde}))
   };
 }
@@ -386,9 +386,14 @@ function paint(s,full){
     d.querySelector('.nm').textContent=(sp.you?'TOI · ':'')+sp.pseudo;
     d.querySelector('.bt').textContent=(sp.bet?('€'+sp.bet):'—')+(sp.res?(' · '+sp.res):'');
     const box=d.querySelector('.hands');
+    box.style.display='flex';box.style.justifyContent='center';box.style.gap='.55rem';box.style.alignItems='flex-start';
     (sp.hands||[]).forEach((h,k)=>{
-      let hd=box.children[k];if(!hd){hd=document.createElement('div');hd.className='hand';box.appendChild(hd);}
-      fill(hd,h.cards||[]);
+      let col=box.children[k];
+      if(!col || !col.querySelector){col=document.createElement('div');col.innerHTML='<div class="hlab"></div><div class="hand"></div><div class="tot"></div>';box.appendChild(col);}
+      col.style.cssText='width:46%;min-width:118px;padding:.2rem;border-radius:10px;'+(h.on?'box-shadow:inset 0 0 0 2px #e8d48b;background:#0004':'');
+      col.querySelector('.hlab').textContent=(sp.hands.length>1?('MAIN '+(k+1)+(h.on?' · TON TOUR':'')):'VOUS');
+      fill(col.querySelector('.hand'),h.cards||[]);
+      col.querySelector('.tot').textContent=(h.tot!=null?h.tot:'');
     });
     while(box.children.length>(sp.hands||[]).length)box.removeChild(box.lastChild);
   });
