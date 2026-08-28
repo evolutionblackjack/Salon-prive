@@ -354,7 +354,23 @@ function render(s){ui(s);}
 
 
 $('gear').onclick=()=>{const b=document.querySelector('#game .bar');if(b)b.style.display=b.style.display==='flex'?'none':'flex';};
-let liveT=null;
+let liveT=null,syncT=null,lastSig='';
+function startSync(){
+  if(syncT)clearInterval(syncT);
+  syncT=setInterval(async()=>{
+    if(dealing||window._act)return;
+    const g=$('game');if(!g||!g.classList.contains('on'))return;
+    try{
+      const s=await api('/api/etat');
+      const sig=[s.phase,s.solde,s.bet,s.which,s.result||'',(s.player||[]).map(c=>c.v+c.c).join(''),(s.dealer||[]).map(c=>(c.v||'?')+(c.c||'')).join(''),(s.split||[]).map(c=>c.v+c.c).join('')].join('|');
+      if(sig===lastSig)return;
+      lastSig=sig;
+      ui(s,'keep');
+      paintHands(s);
+      if(s.dealer&&s.dealer.length){if($('dt'))$('dt').textContent=s.dtot!=null?s.dtot:'';}
+    }catch(e){}
+  },700);
+}
 
 function startHud(){
   const h=$('hud'); if(h) h.classList.add('on');
@@ -376,15 +392,15 @@ async function refreshLive(){
     }
   }catch(e){}
 }
-$('go').onclick=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));if(moi.role==='admin') startHud();}catch(e){$('er').textContent=e.message;}};
+$('go').onclick=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';show('game');render(await api('/api/etat'));startSync();if(moi.role==='admin') startHud();}catch(e){$('er').textContent=e.message;}};
 $('leave').onclick=async()=>{try{await api('/api/quitter',{});}catch(e){}seated=false;lastBet=0;if(autoT)clearTimeout(autoT);$('dh').innerHTML='';if($('handsRow'))$('handsRow').innerHTML='';$('dt').textContent='';$('msg').textContent='';if($('chipon'))$('chipon').innerHTML='';$('acts').innerHTML='';$('chips').innerHTML='';api('/api/etat').then(render);};
 $('seat').onclick=()=>{seated=true;api('/api/etat').then(render);};
 $('out2')&&($('out2').onclick=()=>$('out').click());
-$('out').onclick=()=>{if(autoT)clearTimeout(autoT);if(liveT)clearInterval(liveT);const h=$('hud');if(h)h.classList.remove('on');lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
+$('out').onclick=()=>{if(autoT)clearTimeout(autoT);if(liveT)clearInterval(liveT);if(syncT)clearInterval(syncT);const h=$('hud');if(h)h.classList.remove('on');lastBet=0;token=null;localStorage.removeItem('bj.t');show('login');};
 $('admBtn').onclick=async()=>{show('admin');if(liveT)clearInterval(liveT);refreshLive();liveT=setInterval(refreshLive,1000);const d=await api('/api/admin');const m=$('modes');m.innerHTML='<h2>Mode</h2>';Object.entries(d.modes).forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.style.margin='.2rem';if(d.mode===k)b.className='g';b.onclick=async()=>{await api('/api/admin',{mode:k});$('admBtn').click();};m.appendChild(b);});
 const list=$('clist');list.innerHTML='';d.comptes.forEach(c=>{const r=document.createElement('div');r.className='row';r.innerHTML='<span>'+c.pseudo+' / '+c.code+' · €'+c.solde+'</span>';const i=document.createElement('input');i.type='number';i.placeholder='+/-';const ok=document.createElement('button');ok.className='g';ok.textContent='OK';ok.onclick=async()=>{await api('/api/admin',{jetons:{id:c.id,delta:+i.value||0}});$('admBtn').click();};r.appendChild(i);r.appendChild(ok);list.appendChild(r);});};
 $('ncBtn').onclick=async()=>{await api('/api/admin',{nouveau:{pseudo:$('np').value,code:$('nc').value,solde:+$('ns').value||2000}});$('admBtn').click();};
-$('back').onclick=async()=>{if(liveT)clearInterval(liveT);show('game');render(await api('/api/etat'));};
-if(token){api('/api/etat').then(s=>{moi={pseudo:s.pseudo,role:s.role,solde:s.solde};$('admBtn').style.display=s.role==='admin'?'inline':'none';show('game');render(s);if(s.role==='admin') startHud();}).catch(()=>{});}
+$('back').onclick=async()=>{if(liveT)clearInterval(liveT);show('game');render(await api('/api/etat'));startSync();if(moi&&moi.role==='admin')startHud();};
+if(token){api('/api/etat').then(s=>{moi={pseudo:s.pseudo,role:s.role,solde:s.solde};$('admBtn').style.display=s.role==='admin'?'inline':'none';show('game');render(s);startSync();if(s.role==='admin') startHud();}).catch(()=>{});}
 </script></body></html>`;
 http.createServer(async(req,res)=>{const p=new URL(req.url,'http://x').pathname;if(p.startsWith('/api/'))return api(req,res,p);res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(PAGE);}).listen(PORT,()=>console.log('BJ',PORT));
