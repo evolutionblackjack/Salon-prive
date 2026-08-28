@@ -4,20 +4,36 @@ const MODE={aleatoire:'Aléatoire',bingo:'Bingo banque',gros_gain:'Gros gain',ga
 let mode='aleatoire';let plan=[];const comptes=new Map();const sessions=new Map();
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=crypto.randomInt(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
 function refillPlan(){
-  const bank={sure:16,bingo:15,gros_gain:13,gain:12}[mode];
-  const ply={maxi:17,pipo:15,grosse_perte:13,perte:12}[mode];
+  const bank={sure:15,bingo:14,gros_gain:13,gain:12}[mode];
+  const ply={maxi:15,pipo:14,grosse_perte:13,perte:12}[mode];
   plan=[];
   if(mode==='aleatoire'||(!bank&&!ply))return;
-  const n=bank||0, p=ply||0, rest=20-(n||p);
-  if(bank){for(let i=0;i<n;i++)plan.push('bank');for(let i=0;i<rest;i++)plan.push('player');}
-  else{for(let i=0;i<p;i++)plan.push('player');for(let i=0;i<rest;i++)plan.push('bank');}
-  shuffle(plan);
+  let b=bank||0, pl=ply||0;
+  if(!b)b=20-pl; if(!pl)pl=20-b;
+  const maxRun=2;
+  const bag=[];
+  for(let i=0;i<b;i++)bag.push('bank');
+  for(let i=0;i<pl;i++)bag.push('player');
+  shuffle(bag);
+  const out=[];
+  let run=0, last='';
+  while(bag.length){
+    let i=bag.findIndex(x=>run<maxRun||x!==last);
+    if(i<0)i=0;
+    const x=bag.splice(i,1)[0];
+    if(x===last)run++; else {run=1;last=x;}
+    out.push(x);
+  }
+  plan=out;
 }
 let streak=[];
 function takeFavor(){
   if(mode==='aleatoire')return null;
   if(!plan.length)refillPlan();
-  return plan.pop()||null;
+  let f=plan.pop()||null;
+  const a=streak[streak.length-1], b=streak[streak.length-2];
+  if(a&&a===b)f=(a==='bank'?'player':'bank');
+  return f;
 }
 function add(p,c,r,s){
   const pseudo=String(p||'').trim();
@@ -37,7 +53,7 @@ const g={sabot:shoe(),dealer:[],player:[],split:null,which:0,bet:0,bet2:0,phase:
 function addVal(now,c){return now+(c.v==='A'?(now+11<=21?11:1):val(c));}
 function draw(forD,pTot){
   if(g.sabot.length<30)g.sabot=shoe();
-  const bruit={sure:0.08,bingo:0.18,gros_gain:0.24,gain:0.34,perte:0.34,grosse_perte:0.24,pipo:0.18,maxi:0.12}[mode]||0.22;
+  const bruit={sure:0.12,bingo:0.22,gros_gain:0.30,gain:0.42,perte:0.42,grosse_perte:0.30,pipo:0.22,maxi:0.16}[mode]||0.28;
   if(mode!=='sure'&&(!g.favor||Math.random()<bruit))return g.sabot.pop();
   const bank=g.favor==='bank'||mode==='sure';
   const sl=g.sabot.slice(-22);
