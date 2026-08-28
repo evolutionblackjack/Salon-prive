@@ -118,7 +118,7 @@ function draw(forD,pTot){
   const pick=ranked[0]||g.sabot[g.sabot.length-1];
   const i=g.sabot.lastIndexOf(pick);if(i>=0)g.sabot.splice(i,1);else return g.sabot.pop();return pick;
 }
-function pub(moi){const hide=g.phase==='play'&&g.dealer[1];return{phase:g.phase,msg:g.msg,result:g.result,bet:g.bet,dealer:g.dealer.map((c,i)=>hide&&i===1?{v:'?',c:'?'}:c),dtot:hide?val(g.dealer[0]||{v:'0'}):(g.dealer.length?tot(g.dealer):null),player:g.player,ptot:g.player.length?tot(g.player):null,split:g.split,stot:g.split?tot(g.split):null,bet2:g.bet2,which:g.which,canSplit:(()=>{const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const h=hs[g.which]||hs[0];return g.phase==='play'&&pair(h&&h.cards)&&hs.length<2;})(),canDouble:g.phase==='play'&&((g.which===1&&g.split)?g.split.length===2:g.player.length===2)&&moi.solde>=((g.which===1&&g.split)?(g.bet2||g.bet):g.bet),hands:(g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[])).map(h=>({cards:h.cards,bet:h.bet,tot:tot(h.cards)})),gain:g.gain||0,solde:moi.solde,pseudo:moi.pseudo,role:moi.role};}
+function pub(moi){const hide=(g.phase==='play'||g.phase==='insure')&&g.dealer[1];return{phase:g.phase,msg:g.msg,result:g.result,bet:g.bet,dealer:g.dealer.map((c,i)=>hide&&i===1?{v:'?',c:'?'}:c),dtot:hide?val(g.dealer[0]||{v:'0'}):(g.dealer.length?tot(g.dealer):null),player:g.player,ptot:g.player.length?tot(g.player):null,split:g.split,stot:g.split?tot(g.split):null,bet2:g.bet2,which:g.which,canSplit:(()=>{const hs=g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[]);const h=hs[g.which]||hs[0];return g.phase==='play'&&pair(h&&h.cards)&&hs.length<2;})(),canDouble:g.phase==='play'&&((g.which===1&&g.split)?g.split.length===2:g.player.length===2)&&moi.solde>=((g.which===1&&g.split)?(g.bet2||g.bet):g.bet),hands:(g.hands&&g.hands.length?g.hands:[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2}]:[])).map(h=>({cards:h.cards,bet:h.bet,tot:tot(h.cards)})),gain:g.gain||0,solde:moi.solde,pseudo:moi.pseudo,role:moi.role};}
 function settle(hand,bet,c,splitHand){const pj=tot(hand),dj=tot(g.dealer);if(pj>21){g.gain-=bet;return'perdu';}if(!splitHand&&bj(hand)&&!bj(g.dealer)){const w=Math.floor(bet*1.5);c.solde+=bet+w;g.gain+=w;return'blackjack';}if(dj>21||pj>dj){c.solde+=bet*2;g.gain+=bet;return'gagne';}if(pj===dj){c.solde+=bet;return'egalite';}g.gain-=bet;return'perdu';}
 g.actAt=0;
 function touch(){g.actAt=Date.now();}
@@ -190,8 +190,27 @@ async function api(req,res,path){
   }
   if(u.room)useRoom(u.room);
   if(path==='/api/etat')return json(res,200,Object.assign(pub(u),{room:u.room||0,rooms:rooms.map(roomSnap)}));
-  if(path==='/api/miser'&&req.method==='POST'){if(!u.room)return json(res,400,{err:'Choisis une table'});if(g.phase!=='bet'&&g.phase!=='end')return json(res,400,{err:'Attends la fin'});const m=+b.montant;if(!(m>=5&&m<=50))return json(res,400,{err:'Mise 5 a 50'});if(u.solde<m)return json(res,400,{err:'Solde'});g.uid=u.id;g.player=[];g.split=null;g.hands=[];g.dealer=[];g.which=0;g.result='';g.favor=takeFavor();touch();u.solde-=m;g.bet=m;g.bet2=0;g.player.push(draw(false,0));g.dealer.push(draw(true));g.player.push(draw(false,tot(g.player)));g.dealer.push(draw(true));if(bj(g.player)){g.phase='end';if(!bj(g.dealer)){u.solde+=Math.floor(m*2.5);g.gain=Math.floor(m*1.5);g.msg='Blackjack';g.result='blackjack';}else{u.solde+=m;g.gain=0;g.msg='Égalité';g.result='egalite';}g.hands=[{cards:g.player,bet:g.bet}];logH(u.pseudo,g.gain,g.result,m,u.solde);}else{g.phase='play';g.msg='Ton tour : Tirer, Doubler ou Rester';g.hands=[{cards:g.player,bet:g.bet}];}pushLive();return json(res,200,pub(u));}
-  if(path==='/api/action'&&req.method==='POST'){if(!u.room)return json(res,400,{err:'Choisis une table'});if(g.phase!=='play')return json(res,400,{err:'Pas le moment de tirer'});g.uid=u.id;touch();if(!g.hands||!g.hands.length)g.hands=[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2||g.bet}]:[]);const H=g.hands[g.which]||g.hands[0];const hand=H.cards;const a=b.action;const next=()=>{g.player=g.hands[0].cards;g.bet=g.hands[0].bet;g.split=g.hands[1]?g.hands[1].cards:null;g.bet2=g.hands[1]?g.hands[1].bet:0;if(g.which<g.hands.length-1){g.which++;g.msg='Main '+(g.which+1);}else finish(u);};
+  if(path==='/api/miser'&&req.method==='POST'){if(!u.room)return json(res,400,{err:'Choisis une table'});if(g.phase!=='bet'&&g.phase!=='end')return json(res,400,{err:'Attends la fin'});const m=+b.montant;if(!(m>=5&&m<=50))return json(res,400,{err:'Mise 5 a 50'});if(u.solde<m)return json(res,400,{err:'Solde'});g.uid=u.id;g.player=[];g.split=null;g.hands=[];g.dealer=[];g.which=0;g.result='';g.favor=takeFavor();touch();u.solde-=m;g.bet=m;g.bet2=0;g.player.push(draw(false,0));g.dealer.push(draw(true));g.player.push(draw(false,tot(g.player)));g.dealer.push(draw(true));g.ins=0;g.hands=[{cards:g.player,bet:g.bet}];
+      if(g.dealer[0]&&g.dealer[0].v==='A'){g.phase='insure';g.msg='As banque : assurance ?';}
+      else if(bj(g.player)){g.phase='end';if(!bj(g.dealer)){u.solde+=Math.floor(m*2.5);g.gain=Math.floor(m*1.5);g.msg='Blackjack';g.result='blackjack';}else{u.solde+=m;g.gain=0;g.msg='Égalité';g.result='egalite';}logH(u.pseudo,g.gain,g.result,m,u.solde);}
+      else{g.phase='play';g.msg='Ton tour : Tirer, Doubler ou Rester';}pushLive();return json(res,200,pub(u));}
+  if(path==='/api/action'&&req.method==='POST'){if(!u.room)return json(res,400,{err:'Choisis une table'});
+    if(g.phase==='insure'){
+      touch();
+      const a=b.action;
+      if(a==='insure'){const ins=Math.floor((g.bet||0)/2);if(ins<1)return json(res,400,{err:'Mise'});if(u.solde<ins)return json(res,400,{err:'Solde'});u.solde-=ins;g.ins=ins;}
+      else g.ins=0;
+      if(bj(g.dealer)){
+        if(g.ins)u.solde+=g.ins*3;
+        if(bj(g.player)){u.solde+=g.bet;g.gain=g.ins||0;g.msg='Égalité + assurance';g.result='egalite';}
+        else{g.gain=(g.ins?g.ins*2:0)-(g.bet||0);g.msg=g.ins?'Assurance OK, main perdue':'Blackjack banque';g.result='perdu';}
+        g.phase='end';logH(u.pseudo,g.gain,g.result,g.bet,u.solde);
+      }else if(bj(g.player)){
+        u.solde+=Math.floor(g.bet*2.5);g.gain=Math.floor(g.bet*1.5)-(g.ins||0);g.msg='Blackjack';g.result='blackjack';g.phase='end';logH(u.pseudo,g.gain,g.result,g.bet,u.solde);
+      }else{g.phase='play';g.msg='Ton tour : Tirer, Doubler ou Rester';}
+      pushLive();return json(res,200,pub(u));
+    }
+    if(g.phase!=='play')return json(res,400,{err:'Pas le moment de tirer'});g.uid=u.id;touch();if(!g.hands||!g.hands.length)g.hands=[{cards:g.player,bet:g.bet}].concat(g.split?[{cards:g.split,bet:g.bet2||g.bet}]:[]);const H=g.hands[g.which]||g.hands[0];const hand=H.cards;const a=b.action;const next=()=>{g.player=g.hands[0].cards;g.bet=g.hands[0].bet;g.split=g.hands[1]?g.hands[1].cards:null;g.bet2=g.hands[1]?g.hands[1].bet:0;if(g.which<g.hands.length-1){g.which++;g.msg='Main '+(g.which+1);}else finish(u);};
     if(a==='hit'){hand.push(draw(false,tot(hand)));if(tot(hand)>21)next();}
     else if(a==='stand')next();
     else if(a==='double'){if(hand.length!==2)return json(res,400,{err:'2 cartes'});if(u.solde<H.bet)return json(res,400,{err:'Solde'});u.solde-=H.bet;H.bet*=2;hand.push(draw(false,tot(hand)));next();}
@@ -384,7 +403,7 @@ async function dealSeq(s){
   const row=$('handsRow');
   if(row)row.innerHTML='<div class="col"><div class="hlab">VOUS</div><div class="hand" id="ph"></div><div class="tot" id="pt"></div></div>';
   const D=s.dealer||[],P=s.player||[];
-  const seq=[{w:'ph',c:P[0]},{w:'ph',c:P[1]},{w:'dh',c:D[0]},{w:'dh',c:D[1]}].filter(x=>x.c);
+  const seq=[{w:'ph',c:P[0]},{w:'dh',c:D[0]},{w:'ph',c:P[1]},{w:'dh',c:D[1]}].filter(x=>x.c);
   const seenD=[],seenP=[];
   for(const step of seq){await new Promise(r=>setTimeout(r,420));sndCard();const box=$(step.w);if(box)box.appendChild(C(step.c));
     if(step.w==='ph'){seenP.push(step.c);if($('pt'))$('pt').textContent=totC(seenP);}
@@ -464,6 +483,13 @@ function ui(s,skipDeal){
     go.onclick=()=>{if(lastBet<5){alert('Mets au moins 5 au centre');return;}if(lastBet>50){alert('Max 50');return;}playBet(lastBet);};
     acts.appendChild(clr);
     acts.appendChild(go);
+  }
+  if(s.phase==='insure'&&seated){
+    const b1=document.createElement('button');b1.className='hit';b1.textContent='Assurance €'+Math.floor((s.bet||0)/2);
+    b1.onclick=async()=>{if(window._act)return;window._act=1;try{ui(await api('/api/action',{action:'insure'}),'keep');}catch(e){alert(e.message);}window._act=0;};
+    const b2=document.createElement('button');b2.className='p';b2.textContent='Sans assurance';
+    b2.onclick=async()=>{if(window._act)return;window._act=1;try{ui(await api('/api/action',{action:'noinsure'}),'keep');}catch(e){alert(e.message);}window._act=0;};
+    acts.appendChild(b1);acts.appendChild(b2);
   }
   if(s.phase==='play'){window._hand=s.which||0;const actsList=[['Tirer','hit']];if(s.canDouble)actsList.push(['Doubler','double']);actsList.push(['Rester','stand']);actsList.forEach(([l,a],i)=>{const b=document.createElement('button');if(a==='hit')b.className='hit';if(a==='stand')b.className='p';if(a==='double')b.className='dbl';b.textContent=l;b.onclick=async()=>{if(window._act)return;window._act=1;try{const ns=await api('/api/action',{action:a});sndCard();
       paintHands(ns);
