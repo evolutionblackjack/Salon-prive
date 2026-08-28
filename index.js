@@ -348,7 +348,7 @@ border:2px solid #f0d78a;color:transparent}
 <div id="game" class="v">
 <div class="bar"><b id="who"></b><span id="solde"></span><span><button class="g" id="admBtn" style="display:none;padding:.35rem .6rem">Admin</button> <button id="leave" style="background:#4a2a16;color:#f4efe4;padding:.35rem .55rem">Lever</button> <button id="out" style="background:#333;color:#fff;padding:.35rem .6rem">Déconnexion</button></span></div>
 <div class="felt"><div class="brand">BLACKJACK</div>
-  <div class="felt-top"><div class="mini"><div class="mb"></div><span>TALON</span></div><div class="lab">CROUPIER</div><div class="mini"><div class="mb s"></div><span>SABOT</span></div></div>
+  <div class="felt-top"><div class="mini"><div class="mb"></div><span>TALON</span></div><div class="lab">CROUPIER</div><button id="leaveTop" style="background:#2a1810;color:#e8d48b;border:1px solid #c9a22755;font-size:.58rem;letter-spacing:.08em;padding:.28rem .45rem;border-radius:8px">QUITTER</button></div>
   <div class="hand" id="dh"></div><div class="tot" id="dt"></div>
   <div class="arc">LE BLACKJACK PAIE 3 POUR 2<br><small>LA BANQUE TIRE A 16 · RESTE A 17</small></div>
   <div class="place" id="place">PLACE YOUR BETS</div>
@@ -407,7 +407,7 @@ function ensureAudio(){try{if(!actx)actx=new (window.AudioContext||window.webkit
 document.addEventListener('pointerdown',()=>ensureAudio(),{passive:true});
 function beep(f,ms,vol){try{ensureAudio();const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(vol||.08,t);g.gain.exponentialRampToValueAtTime(.001,t+(ms||.12));o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+(ms||.14));}catch(e){}}
 function noise(ms,freq,type,vol){try{ensureAudio();const n=actx.createBuffer(1,Math.max(1,Math.floor(actx.sampleRate*(ms||.06))),actx.sampleRate);const d=n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(d.length*.22));const s=actx.createBufferSource();s.buffer=n;const f=actx.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq||1400;f.Q.value=0.8;const g=actx.createGain();g.gain.value=vol||.22;s.connect(f);f.connect(g);g.connect(actx.destination);s.start();}catch(e){}}
-function sndCard(){if(!pref.snd)return;noise(.22,380,'highpass',.4);setTimeout(()=>noise(.16,720,'bandpass',.32),40);setTimeout(()=>noise(.12,1400,'bandpass',.26),90);setTimeout(()=>noise(.1,2100,'highpass',.2),140);setTimeout(()=>{noise(.08,2800,'highpass',.16);beep(880,.05,.05);},190);setTimeout(()=>noise(.05,1600,'bandpass',.1),250);}
+function sndCard(){if(!pref.snd)return;noise(.045,2200,'highpass',.26);setTimeout(()=>noise(.03,1400,'bandpass',.16),16);setTimeout(()=>beep(2100,.02,.035),24);}
 function sndChip(){if(!pref.snd)return;noise(.14,160,'lowpass',.48);setTimeout(()=>noise(.1,280,'lowpass',.36),30);setTimeout(()=>beep(240,.08,.09),50);setTimeout(()=>noise(.08,620,'bandpass',.28),80);setTimeout(()=>beep(360,.06,.06),110);setTimeout(()=>noise(.06,1100,'highpass',.14),150);setTimeout(()=>noise(.05,480,'lowpass',.12),200);}
 function sndWin(){if(!pref.snd)return;noise(.12,1600,'bandpass',.22);[392,523,659,784,988,1175,1319,1568,1976,2349].forEach((f,i)=>setTimeout(()=>{beep(f,.16,.11);if(i%2===0)noise(.07,2000,'highpass',.12);},i*85));setTimeout(()=>{beep(2637,.22,.09);noise(.1,2600,'bandpass',.12);},900);}
 function sndLose(){if(!pref.snd)return;noise(.18,220,'lowpass',.24);beep(140,.28,.07);setTimeout(()=>beep(92,.3,.06),140);}
@@ -643,6 +643,7 @@ async function paintLobby(){
 }
 const doLogin=async()=>{$('er').textContent='';try{const d=await api('/api/login',{pseudo:$('ps').value.trim(),code:$('cd').value});token=d.token;localStorage.setItem('bj.t',token);if($('mem')&&$('mem').checked){$('logf').autocomplete='on';localStorage.setItem('bj.ps',$('ps').value.trim());localStorage.setItem('bj.cd',$('cd').value);}else{if($('logf'))$('logf').autocomplete='off';localStorage.removeItem('bj.ps');localStorage.removeItem('bj.cd');}moi=d.moi;$('admBtn').style.display=moi.role==='admin'?'inline':'none';if($('admBtn2'))$('admBtn2').style.display=moi.role==='admin'?'inline':'none';if($('admRail'))$('admRail').style.display=moi.role==='admin'?'inline-flex':'none';show('lobby');await paintLobby();armSpy();if(moi.role==='admin') startHud();}catch(e){$('er').textContent=e.message;}};
 if($('logf'))$('logf').onsubmit=e=>{e.preventDefault();doLogin();};$('go').onclick=doLogin;
+if($('leaveTop'))$('leaveTop').onclick=()=>$('leave').click();
 $('leave').onclick=async()=>{try{await api('/api/quitter',{});}catch(e){}seated=false;lastBet=0;roomNo=0;if(autoT)clearTimeout(autoT);$('dh').innerHTML='';if($('handsRow'))$('handsRow').innerHTML='';$('dt').textContent='';$('msg').textContent='';if($('chipon'))$('chipon').innerHTML='';$('acts').innerHTML='';$('chips').innerHTML='';show('lobby');paintLobby();};
 $('seat').onclick=()=>{seated=true;idleAt=Date.now();sndSit();api('/api/etat').then(render);};
 let idleAt=Date.now();
