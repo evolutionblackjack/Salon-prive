@@ -94,7 +94,7 @@ const PAGE=`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta nam
 h1{letter-spacing:.2em;font-weight:500;margin:.6rem 0 1.2rem}
 input{width:100%;max-width:320px;padding:.8rem;margin:.3rem 0;border:1px solid #c9a22766;background:#1a0808;color:#fff;text-align:center;border-radius:8px}
 button{border:0;border-radius:8px;padding:.7rem 1rem;font-weight:700}
-.g{background:linear-gradient(#e8d48b,#b8860b);color:#1a1205}.err{color:#f87171;min-height:1.2em}
+.g{background:linear-gradient(#e8d48b,#b8860b);color:#1a1205}.err{color:#f87171;min-height:1.2em}.note{max-width:360px;margin:1.1rem auto 0;padding:.75rem .85rem;border:1px solid #c9a22744;border-radius:10px;font-size:.72rem;line-height:1.45;color:#c8c0b0;text-align:left}.note b{color:#e8d48b;font-weight:600}
 .bar{display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;background:#07110c}
 .felt{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:.45rem .5rem .3rem;display:flex;flex-direction:column;align-items:center;gap:.28rem;background:
 radial-gradient(ellipse at 50% 8%,#1f5c3a 0%,#0f3d28 55%,#0a2a1c 100%);border-radius:10px;}
@@ -166,10 +166,11 @@ radial-gradient(ellipse at 50% 8%,#1f5c3a 0%,#0f3d28 55%,#0a2a1c 100%);border-ra
 <div id="login" class="v on"><div>
 <div style="width:70px;height:70px;border:2px solid #c9a227;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;color:#c9a227;font-size:1.4rem">21</div>
 <h1>BLACKJACK</h1>
-<p style="opacity:.5;font-size:.7rem;letter-spacing:.18em;margin:-.6rem 0 .8rem">V4 · JETON PUIS JOUER</p>
 <input id="ps" placeholder="Pseudo"><input id="cd" type="password" placeholder="Code">
 <button class="g" id="go" style="width:100%;max-width:320px;margin-top:.5rem">Entrer</button>
-<p class="err" id="er"></p></div></div>
+<p class="err" id="er"></p>
+<p class="note">Sabot mélangé par <b>Fisher–Yates</b> alimenté par <b>crypto.getRandomValues</b>, remélangé au passage de la carte de coupe. Aucune carte n'est choisie en fonction de la main en cours : l'avantage vient uniquement des règles ci-dessus.</p>
+</div></div>
 <div id="game" class="v">
 <div class="bar"><b id="who"></b><span id="solde"></span><span><button class="g" id="admBtn" style="display:none;padding:.35rem .6rem">Admin</button> <button id="leave" style="background:#4a2a16;color:#f4efe4;padding:.35rem .55rem">Lever</button> <button id="out" style="background:#333;color:#fff;padding:.35rem .6rem">Déconnexion</button></span></div>
 <div class="felt"><div class="brand">BLACKJACK</div>
@@ -218,7 +219,7 @@ if(PIPS[c.v]){mid='<div class="pips">'+[1,2,3,4,5,6,7,8,9].map(n=>'<span>'+(PIPS
 else mid='<div class="pip">'+(c.v==='J'?'V':c.v==='Q'?'D':c.v)+c.c+'</div>';
 d.innerHTML='<div class="c1">'+k+'</div>'+mid+'<div class="c2">'+k+'</div>';}return d;}
 function totC(m){let t=0,a=0;for(const c of m||[]){if(!c||c.v==="?")continue;const v=(c.v==="A"?11:["J","Q","K","V","D","R"].includes(c.v)?10:+c.v);t+=v;if(c.v==="A")a++;}while(t>21&&a){t-=10;a--;}return t;}
-function banner(title,amt){const o=document.querySelector('.banner');if(o)o.remove();const b=document.createElement('div');b.className='banner';b.innerHTML='<b>'+title+'</b><span>'+amt+'</span>';document.body.appendChild(b);setTimeout(()=>b.remove(),1000);}
+function banner(title,amt){const o=document.querySelector('.banner');if(o)o.remove();const b=document.createElement('div');b.className='banner';b.innerHTML='<b>'+title+'</b><span>'+amt+'</span>';document.body.appendChild(b);setTimeout(()=>b.remove(),1600);}
 function fillHand(el,cards){el.innerHTML='';(cards||[]).forEach((c,i,a)=>{const d=C(c);if(i<a.length-1)d.style.animation='none';el.appendChild(d);});}
 async function playBet(v){
   if(dealing) return;
@@ -308,7 +309,7 @@ function ui(s,skipDeal){
   if(s.phase==='play'){window._hand=s.which||0;const actsList=[['Tirer','hit']];if(s.canDouble)actsList.push(['Doubler','double']);actsList.push(['Rester','stand']);actsList.forEach(([l,a],i)=>{const b=document.createElement('button');if(a==='stand')b.className='p';if(a==='double'){b.className='p';b.style.background='#1e5a9c';b.style.color='#fff';}b.textContent=l;b.onclick=async()=>{if(window._act)return;window._act=1;try{const ns=await api('/api/action',{action:a});sndCard();
       paintHands(ns);
       if(a==='double'||a==='hit')await new Promise(r=>setTimeout(r,420));
-      if(ns.phase==='end'){await revealDealer(ns);ui(ns,'keep');}
+      if(ns.phase==='end'){await revealDealer(ns);await new Promise(r=>setTimeout(r,900));ui(ns,'keep');}
       else ui(ns,'keep');
     }catch(e){alert(e.message);}window._act=0;};acts.appendChild(b);});
   const cur=HS[s.which]||HS[0];
