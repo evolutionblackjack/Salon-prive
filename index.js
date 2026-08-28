@@ -106,7 +106,7 @@ radial-gradient(ellipse at 50% 8%,#1f5c3a 0%,#0f3d28 55%,#0a2a1c 100%);border-ra
 .hlab{font-size:.58rem;letter-spacing:.12em;text-align:center;opacity:.7;margin-bottom:.2rem}
 .lab{font-size:.65rem;letter-spacing:.18em;opacity:.7;color:#f0d9a0}
 .hand{display:flex;gap:0;min-height:88px;perspective:500px}
-.card{width:66px;height:96px;margin-right:-16px;border-radius:7px;background:linear-gradient(#fffef6,#f4ead4 55%,#e8dcc0);color:#1a1208;position:relative;box-shadow:0 10px 16px #0007,0 1px 0 #fff8 inset,0 0 0 1px #cbb896;animation:deal .42s cubic-bezier(.2,.7,.2,1);flex-shrink:0}
+.card{width:66px;height:96px;margin-right:-16px;border-radius:7px;background:linear-gradient(#fff,#f6f3ec);color:#1a1208;position:relative;box-shadow:0 10px 16px #0007,0 1px 0 #fff8 inset,0 0 0 1px #cbb896;animation:deal .42s cubic-bezier(.2,.7,.2,1);flex-shrink:0}
 .card .c1,.card .c2{position:absolute;width:18px;text-align:center;font-family:Georgia,'Times New Roman',serif;font-weight:800;line-height:1.05;font-size:.78rem}
 .card .c1{top:5px;left:4px}.card .c2{bottom:5px;right:4px;transform:rotate(180deg)}
 .card .pip{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);font-size:1.35rem;font-family:Georgia,serif}
@@ -148,6 +148,8 @@ radial-gradient(ellipse at 50% 8%,#1f5c3a 0%,#0f3d28 55%,#0a2a1c 100%);border-ra
 .arc{text-align:center;color:#c9b87a;opacity:.55;font-size:.62rem;letter-spacing:.07em;margin:.25rem 0;line-height:1.35}
 .oval{width:130px;height:58px;border:2px solid rgba(201,176,90,.5);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:.15rem auto}
 .vous{font-size:.58rem;letter-spacing:.22em;opacity:.5;margin-top:.1rem}
+.place{letter-spacing:.22em;font-size:.78rem;color:#fff;text-shadow:0 2px 10px #000a;font-weight:700;margin:.1rem 0}
+.place.off{visibility:hidden}
 .rail{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#5c3a22,#2c1a10);padding:.45rem .8rem calc(.45rem + env(safe-area-inset-bottom));border:1px solid #c9a22755;border-radius:14px 14px 0 0;flex-shrink:0;margin-top:.2rem}
 .rail-cell{text-align:center;min-width:72px}
 .rail .rk{font-size:.52rem;letter-spacing:.16em;opacity:.65}
@@ -178,6 +180,7 @@ radial-gradient(ellipse at 50% 8%,#1f5c3a 0%,#0f3d28 55%,#0a2a1c 100%);border-ra
   <div class="felt-top"><div class="mini"><div class="mb"></div><span>TALON</span></div><div class="lab">CROUPIER</div><div class="mini"><div class="mb s"></div><span>SABOT</span></div></div>
   <div class="hand" id="dh"></div><div class="tot" id="dt"></div>
   <div class="arc">LE BLACKJACK PAIE 3 POUR 2<br><small>LA BANQUE TIRE A 16 · RESTE A 17</small></div>
+  <div class="place" id="place">PLACE YOUR BETS</div>
   <div class="oval"><div class="chipon" id="chipon"></div></div>
   <div id="msg"></div>
   <div class="hands-row" id="handsRow"><div class="col" id="col1"><div class="hlab" id="lab1">VOUS</div><div class="hand" id="ph"></div><div class="tot" id="pt"></div></div><div class="col" id="col2" style="display:none"><div class="hlab" id="lab2">MAIN 2</div><div class="hand" id="sh"></div><div class="tot" id="st"></div></div></div>
@@ -276,7 +279,7 @@ function paintHands(s){
   return HS;
 }
 function ui(s,skipDeal){
-  moi.solde=s.solde;$('solde').textContent='€'+s.solde;if($('railSolde'))$('railSolde').textContent=s.solde;if($('railMise'))$('railMise').textContent=s.bet||lastBet||0;$('who').textContent=s.pseudo;$('msg').textContent=s.msg||'';
+  moi.solde=s.solde;$('solde').textContent='€'+s.solde;if($('railSolde'))$('railSolde').textContent=s.solde;if($('railMise'))$('railMise').textContent=s.bet||lastBet||0;$('who').textContent=s.pseudo;$('msg').textContent=s.msg||'';if($('place'))$('place').className=(s.phase==='bet'||s.phase==='end')?'place':'place off';
   const mid=$('chipon');const shown=s.bet||lastBet||0;if(shown){mid.innerHTML=svgChip(shown,shown>=50?'#c42838':shown>=25?'#1a8a3a':'#1e4ec4');}else mid.innerHTML='';mid.className='chipon';
   const seat=$('seat');seat.className='seat'+(seated?' on':'');seat.textContent=seated?(moi.pseudo||'TOI'):"S'ASSEOIR";
   const HS=s.hands&&s.hands.length?s.hands:[{cards:s.player,bet:s.bet,tot:s.ptot}].concat(s.split?[{cards:s.split,bet:s.bet2,tot:s.stot}]:[]);
